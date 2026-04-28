@@ -1,0 +1,59 @@
+#include "worker.h"
+#include <iomanip>
+
+int worker::count = 0;
+
+worker::worker() : fname(), department(0), salary(0.0) {
+count++;
+}
+
+worker::worker(const man& m, int dep, double sal)
+: fname(m), department(dep), salary(sal) {
+count++;
+}
+
+worker::worker(const worker& other)
+: fname(other.fname), department(other.department), salary(other.salary) {
+count++;
+}
+
+worker::~worker() {
+count--;
+}
+
+int worker::getDepartment() const { return department; }
+double worker::getSalary() const { return salary; }
+
+void worker::setDepartment(int dep) { department = dep; }
+void worker::setSalary(double sal) { salary = sal; }
+
+const man& worker::getMan() const { return fname; }
+
+int worker::getCount() { return count; }
+
+bool worker::operator==(const man& m) const {
+return fname == m;
+}
+
+std::istream& operator>>(std::istream& is, worker& w) {
+std::cout << "\nEnter worker data:\n";
+is >> w.fname;
+std::cout << "Department: ";
+is >> w.department;
+std::cout << "Salary: ";
+is >> w.salary;
+return is;
+}
+
+std::ostream& operator<<(std::ostream& os, const worker& w) {
+os << std::left << std::setw(15) << w.fname.getFam()
+<< std::setw(15) << w.fname.getName()
+<< std::setw(10) << w.department
+<< std::setw(10) << w.salary;
+return os;
+}
+
+worker operator+(worker w, double amount) {
+w.salary += amount;
+return w;
+}

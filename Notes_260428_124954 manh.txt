@@ -1,0 +1,31 @@
+#ifndef MAN_H
+#define MAN_H
+
+#include <iostream>
+
+class man {
+private:
+char* fam;
+char* name;
+
+void copyStr(char*& dest, const char* src);
+
+public:
+man();
+man(const char* f, const char* n);
+man(const man& other);
+~man();
+
+void setFam(const char* f);
+void setName(const char* n);
+
+const char* getFam() const;
+const char* getName() const;
+
+bool operator==(const man& other) const;
+
+friend std::ostream& operator<<(std::ostream& os, const man& m);
+friend std::istream& operator>>(std::istream& is, man& m);
+};
+
+#endif

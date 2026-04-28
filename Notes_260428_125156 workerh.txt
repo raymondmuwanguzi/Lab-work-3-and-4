@@ -1,0 +1,39 @@
+#ifndef WORKER_H
+#define WORKER_H
+
+#include "man.h"
+
+class worker {
+private:
+man fname;
+int department;
+double salary;
+
+static int count;
+
+public:
+worker();
+worker(const man& m, int dep, double sal);
+worker(const worker& other);
+~worker();
+
+int getDepartment() const;
+double getSalary() const;
+
+void setDepartment(int dep);
+void setSalary(double sal);
+
+void display() const;
+
+static int getCount();
+
+bool operator==(const man& m) const;
+
+friend std::istream& operator>>(std::istream& is, worker& w);
+friend std::ostream& operator<<(std::ostream& os, const worker& w);
+friend worker operator+(worker w, double amount);
+
+const man& getMan() const;
+};
+
+#endif

@@ -1,0 +1,59 @@
+#include "man.h"
+#include <cstring>
+
+void man::copyStr(char*& dest, const char* src) {
+delete[] dest;
+dest = new char[strlen(src) + 1];
+strcpy(dest, src);
+}
+
+man::man() {
+fam = new char[1]{'\0'};
+name = new char[1]{'\0'};
+}
+
+man::man(const char* f, const char* n) {
+fam = nullptr;
+name = nullptr;
+copyStr(fam, f);
+copyStr(name, n);
+}
+
+man::man(const man& other) {
+fam = nullptr;
+name = nullptr;
+copyStr(fam, other.fam);
+copyStr(name, other.name);
+}
+
+man::~man() {
+delete[] fam;
+delete[] name;
+}
+
+void man::setFam(const char* f) { copyStr(fam, f); }
+void man::setName(const char* n) { copyStr(name, n); }
+
+const char* man::getFam() const { return fam; }
+const char* man::getName() const { return name; }
+
+bool man::operator==(const man& other) const {
+return strcmp(fam, other.fam) == 0 &&
+strcmp(name, other.name) == 0;
+}
+
+std::ostream& operator<<(std::ostream& os, const man& m) {
+os << m.fam << " " << m.name;
+return os;
+}
+
+std::istream& operator>>(std::istream& is, man& m) {
+char f[100], n[100];
+std::cout << "Enter last name: ";
+is >> f;
+std::cout << "Enter first name: ";
+is >> n;
+m.setFam(f);
+m.setName(n);
+return is;
+}
