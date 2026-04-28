@@ -1,0 +1,81 @@
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include "worker.h"
+
+using namespace std;
+
+void saveToFile(worker* db, int size) {
+ofstream out("workers.dat", ios::binary);
+out.write((char*)&size, sizeof(size));
+
+for (int i = 0; i < size; i++)
+db[i].save(out);
+
+out.close();
+}
+
+worker* loadFromFile(int& size) {
+ifstream in("workers.dat", ios::binary);
+
+if (!in) {
+size = 0;
+return nullptr;
+}
+
+in.read((char*)&size, sizeof(size));
+
+worker* db = new worker[size];
+for (int i = 0; i < size; i++)
+db[i].load(in);
+
+in.close();
+return db;
+}
+
+void printDatabase(worker* db, int size) {
+cout << "\n--- DATABASE ---\n";
+cout << left << setw(15) << "Last"
+<< setw(15) << "First"
+<< setw(10) << "Dept"
+<< setw(10) << "Salary\n";
+
+for (int i = 0; i < size; i++)
+cout << db[i] << endl;
+}
+
+void addWorker(worker*& db, int& size) {
+worker* newDb = new worker[size + 1];
+
+for (int i = 0; i < size; i++)
+newDb[i] = db[i];
+
+cin >> newDb[size];
+
+delete[] db;
+db = newDb;
+size++;
+}
+
+int main() {
+int size;
+worker* db = loadFromFile(size);
+
+int choice;
+
+do {
+cout << "\n1.Add\n2.Print\n0.Exit\nChoice: ";
+cin >> choice;
+
+if (choice == 1)
+addWorker(db, size);
+else if (choice == 2)
+printDatabase(db, size);
+
+} while (choice != 0);
+
+saveToFile(db, size);
+delete[] db;
+
+return 0;
+}

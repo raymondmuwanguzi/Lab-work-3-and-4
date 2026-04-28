@@ -1,0 +1,45 @@
+#ifndef WORKER_H
+#define WORKER_H
+
+#include "man.h"
+
+class worker {
+private:
+man fname;
+int department;
+double salary;
+
+static int count;
+
+public:
+worker();
+worker(const man& m, int dep, double sal);
+worker(const worker& other);
+~worker();
+
+// Getters
+int getDepartment() const;
+double getSalary() const;
+man getMan() const;
+
+// Setters
+void setDepartment(int d);
+void setSalary(double s);
+
+// Methods
+void printRow() const;
+static int getCount();
+
+// Operators
+bool operator==(const man& m) const;
+
+friend istream& operator>>(istream& is, worker& w);
+friend ostream& operator<<(ostream& os, const worker& w);
+friend worker operator+(const worker& w, double value);
+
+// Serialization
+void save(ofstream& out) const;
+void load(ifstream& in);
+};
+
+#endif

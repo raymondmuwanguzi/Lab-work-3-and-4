@@ -1,0 +1,128 @@
+#include "worker.h"
+#include <iomanip>
+#include <fstream>
+
+int worker::count = 0;
+
+// Constructors
+worker::worker() : fname(), department(0), salary(0) { count++; }
+
+worker::worker(const man& m, int dep, double sal)
+: fname(m), department(dep), salary(sal) {
+count++;
+}
+
+worker::worker(const worker& other)
+: fname(other.fname), department(other.department), salary(other.salary) {
+count++;
+}
+
+// Destructor
+worker::~worker() { count--; }
+
+// Getters
+int worker::getDepartment() const { return department; }
+double worker::getSalary() const { return salary; }
+man worker::getMan() const { return fname; }
+
+// Setters
+void worker::setDepartment(int d) { department = d; }
+void worker::setSalary(double s) { salary = s; }
+
+// Print row
+void worker::printRow() const {
+cout << left << setw(15) << fname.getFam()
+<< setw(15) << fname.getName()
+<< setw(10) << department
+<< setw(10) << salary << endl;
+}
+
+// Static
+int worker::getCount() { return count; }
+
+// Compare
+bool worker::operator==(const man& m) const {
+return fname == m;
+}
+
+// Input
+istream& operator>>(istream& is, worker& w) {
+is >> w.fname;
+
+cout << "Department: ";
+while (!(is >> w.department)) {
+is.clear();
+is.ignore(1000, '\n');
+cout << "Invalid input. Enter number: ";
+}
+
+cout << "Salary: ";
+while (!(is >> w.salary)) {
+is.clear();
+is.ignore(1000, '\n');
+cout << "Invalid input. Enter number: ";
+}
+
+return is;
+}
+
+// Output
+ostream& operator<<(ostream& os, const worker& w) {
+os << left << setw(15) << w.fname.getFam()
+<< setw(15) << w.fname.getName()
+<< setw(10) << w.department
+<< setw(10) << w.salary;
+return os;
+}
+
+// Add salary
+worker operator+(const worker& w, double value) {
+worker temp(w);
+temp.salary += value;
+return temp;
+}
+
+//////////////////////
+// SAFE FILE I/O
+//////////////////////
+
+void worker::save(ofstream& out) const {
+int len;
+
+// fam
+string f = fname.getFam();
+len = f.size();
+out.write((char*)&len, sizeof(len));
+out.write(f.c_str(), len);
+
+// name
+string n = fname.getName();
+len = n.size();
+out.write((char*)&len, sizeof(len));
+out.write(n.c_str(), len);
+
+// department & salary
+out.write((char*)&department, sizeof(department));
+out.write((char*)&salary, sizeof(salary));
+}
+
+void worker::load(ifstream& in) {
+int len;
+char buffer[256];
+
+// fam
+in.read((char*)&len, sizeof(len));
+in.read(buffer, len);
+buffer[len] = '\0';
+fname.setFam(buffer);
+
+// name
+in.read((char*)&len, sizeof(len));
+in.read(buffer, len);
+buffer[len] = '\0';
+fname.setName(buffer);
+
+// numbers
+in.read((char*)&department, sizeof(department));
+in.read((char*)&salary, sizeof(salary));
+}

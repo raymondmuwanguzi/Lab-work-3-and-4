@@ -1,0 +1,33 @@
+#ifndef MAN_H
+#define MAN_H
+
+#include <iostream>
+#include <string>
+using namespace std;
+
+class man {
+private:
+string fam;
+string name;
+
+public:
+man();
+man(const string& f, const string& n);
+man(const man& other);
+
+// Getters
+string getFam() const;
+string getName() const;
+
+// Setters
+void setFam(const string& f);
+void setName(const string& n);
+
+// Operators
+bool operator==(const man& other) const;
+
+friend ostream& operator<<(ostream& os, const man& m);
+friend istream& operator>>(istream& is, man& m);
+};
+
+#endif

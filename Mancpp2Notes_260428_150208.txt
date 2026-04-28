@@ -1,0 +1,38 @@
+#include "man.h"
+
+// Constructors
+man::man() : fam(""), name("") {}
+
+man::man(const string& f, const string& n) : fam(f), name(n) {}
+
+man::man(const man& other) : fam(other.fam), name(other.name) {}
+
+// Getters
+string man::getFam() const { return fam; }
+string man::getName() const { return name; }
+
+// Setters
+void man::setFam(const string& f) { fam = f; }
+void man::setName(const string& n) { name = n; }
+
+// Compare
+bool man::operator==(const man& other) const {
+return fam == other.fam && name == other.name;
+}
+
+// Output
+ostream& operator<<(ostream& os, const man& m) {
+os << m.fam << " " << m.name;
+return os;
+}
+
+// Input
+istream& operator>>(istream& is, man& m) {
+cout << "Last name: ";
+is >> m.fam;
+
+cout << "First name: ";
+is >> m.name;
+
+return is;
+}
