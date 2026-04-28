@@ -1,0 +1,80 @@
+#include "worker.h"
+#include <iomanip>
+
+int worker::count = 0;
+
+// Constructors
+worker::worker() : fname(), department(0), salary(0) {
+count++;
+}
+
+worker::worker(const man& m, int dep, double sal)
+: fname(m), department(dep), salary(sal) {
+count++;
+}
+
+worker::worker(const worker& other)
+: fname(other.fname), department(other.department), salary(other.salary) {
+count++;
+}
+
+// Destructor
+worker::~worker() {
+count--;
+}
+
+// Getters
+int worker::getDepartment() const { return department; }
+double worker::getSalary() const { return salary; }
+man worker::getMan() const { return fname; }
+
+// Setters
+void worker::setDepartment(int d) { department = d; }
+void worker::setSalary(double s) { salary = s; }
+
+// Print row
+void worker::printRow() const {
+cout << left << setw(15) << fname.getFam()
+<< setw(15) << fname.getName()
+<< setw(10) << department
+<< setw(10) << salary << endl;
+}
+
+// Static
+int worker::getCount() {
+return count;
+}
+
+// Compare worker with man
+bool worker::operator==(const man& m) const {
+return fname == m;
+}
+
+// Input
+istream& operator>>(istream& is, worker& w) {
+is >> w.fname;
+
+cout << "Department: ";
+is >> w.department;
+
+cout << "Salary: ";
+is >> w.salary;
+
+return is;
+}
+
+// Output
+ostream& operator<<(ostream& os, const worker& w) {
+os << left << setw(15) << w.fname.getFam()
+<< setw(15) << w.fname.getName()
+<< setw(10) << w.department
+<< setw(10) << w.salary;
+return os;
+}
+
+// Add salary
+worker operator+(const worker& w, double value) {
+worker temp(w);
+temp.salary += value;
+return temp;
+}

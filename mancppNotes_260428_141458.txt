@@ -1,0 +1,76 @@
+#include "man.h"
+#include <cstring>
+
+// Default constructor
+man::man() {
+fam = new char[1]{ '\0' };
+name = new char[1]{ '\0' };
+}
+
+// Parameterized constructor
+man::man(const char* f, const char* n) {
+fam = new char[strlen(f) + 1];
+strcpy(fam, f);
+
+name = new char[strlen(n) + 1];
+strcpy(name, n);
+}
+
+// Copy constructor
+man::man(const man& other) {
+fam = new char[strlen(other.fam) + 1];
+strcpy(fam, other.fam);
+
+name = new char[strlen(other.name) + 1];
+strcpy(name, other.name);
+}
+
+// Destructor
+man::~man() {
+delete[] fam;
+delete[] name;
+}
+
+// Getters
+const char* man::getFam() const { return fam; }
+const char* man::getName() const { return name; }
+
+// Setters
+void man::setFam(const char* f) {
+delete[] fam;
+fam = new char[strlen(f) + 1];
+strcpy(fam, f);
+}
+
+void man::setName(const char* n) {
+delete[] name;
+name = new char[strlen(n) + 1];
+strcpy(name, n);
+}
+
+// Comparison
+bool man::operator==(const man& other) const {
+return strcmp(fam, other.fam) == 0 &&
+strcmp(name, other.name) == 0;
+}
+
+// Output
+ostream& operator<<(ostream& os, const man& m) {
+os << m.fam << " " << m.name;
+return os;
+}
+
+// Input
+istream& operator>>(istream& is, man& m) {
+char buffer[100];
+
+cout << "Last name: ";
+is >> buffer;
+m.setFam(buffer);
+
+cout << "First name: ";
+is >> buffer;
+m.setName(buffer);
+
+return is;
+}
