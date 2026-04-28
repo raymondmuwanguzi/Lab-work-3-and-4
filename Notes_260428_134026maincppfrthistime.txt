@@ -1,0 +1,180 @@
+#include <iostream>
+#include <fstream>
+#include <iomanip> // 🔥 FIX: required for setw, left, etc.
+
+#include "worker.h"
+#include "man.h"
+
+using namespace std;
+
+// ---------- DATABASE FUNCTIONS ----------
+
+void addWorker(worker*& db, int& size) {
+worker* newDb = new worker[size + 1];
+
+for (int i = 0; i < size; i++)
+newDb[i] = db[i];
+
+cin >> newDb[size];
+
+delete[] db;
+db = newDb;
+size++;
+}
+
+void addMultipleWorkers(worker*& db, int& size) {
+int n;
+cout << "How many workers to add? ";
+cin >> n;
+
+for (int i = 0; i < n; i++)
+addWorker(db, size);
+}
+
+void printDatabase(const worker* db, int size) {
+cout << "\n--- WORKERS DATABASE ---\n";
+
+// 🔥 uses setw → requires <iomanip>
+cout << left << setw(15) << "Last Name"
+<< setw(15) << "First Name"
+<< setw(10) << "Dept"
+<< setw(10) << "Salary" << endl;
+
+for (int i = 0; i < size; i++)
+cout << db[i] << endl;
+}
+
+worker* findWorkerByName(const worker* db, int size,
+const man& searchPerson, int& foundCount) {
+worker* result = new worker[size];
+foundCount = 0;
+
+for (int i = 0; i < size; i++) {
+if (db[i] == searchPerson) {
+result[foundCount++] = db[i];
+}
+}
+
+return result;
+}
+
+void addToSalary(worker* db, int size,
+const man& searchPerson, double amount) {
+for (int i = 0; i < size; i++) {
+if (db[i] == searchPerson) {
+db[i] = db[i] + amount;
+}
+}
+}
+
+void saveToFile(const worker* db, int size, const char* filename) {
+ofstream file(filename, ios::binary);
+
+if (!file) {
+cout << "Error opening file for writing!\n";
+return;
+}
+
+file.write((char*)&size, sizeof(size));
+file.write((char*)db, sizeof(worker) * size);
+
+file.close();
+}
+
+worker* loadFromFile(int& size, const char* filename) {
+ifstream file(filename, ios::binary);
+
+if (!file) {
+size = 0;
+return nullptr;
+}
+
+file.read((char*)&size, sizeof(size));
+
+worker* db = new worker[size];
+file.read((char*)db, sizeof(worker) * size);
+
+file.close();
+return db;
+}
+
+// ---------- MENU ----------
+
+void menu() {
+cout << "\n1. Add worker"
+<< "\n2. Add multiple workers"
+<< "\n3. Show database"
+<< "\n4. Find worker"
+<< "\n5. Add to salary"
+<< "\n0. Exit\n";
+}
+
+// ---------- MAIN ----------
+
+int main() {
+int size = 0;
+worker* db = loadFromFile(size, "workers.dat");
+
+int choice;
+
+do {
+menu();
+cout << "Enter choice: ";
+cin >> choice;
+
+switch (choice) {
+case 1:
+addWorker(db, size);
+break;
+
+case 2:
+addMultipleWorkers(db, size);
+break;
+
+case 3:
+printDatabase(db, size);
+break;
+
+case 4: {
+man m;
+cin >> m;
+
+int found;
+worker* res = findWorkerByName(db, size, m, found);
+
+cout << "\nFound: " << found << endl;
+
+for (int i = 0; i < found; i++)
+cout << res[i] << endl;
+
+delete[] res;
+break;
+}
+
+case 5: {
+man m;
+double amount;
+
+cin >> m;
+cout << "Enter amount: ";
+cin >> amount;
+
+addToSalary(db, size, m, amount);
+break;
+}
+
+case 0:
+cout << "Saving data...\n";
+break;
+
+default:
+cout << "Invalid choice!\n";
+}
+
+} while (choice != 0);
+
+saveToFile(db, size, "workers.dat");
+delete[] db;
+
+return 0;
+}
