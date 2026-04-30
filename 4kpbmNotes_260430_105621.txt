@@ -1,0 +1,48 @@
+Grid
+x = np.linspace(-3, 3, 100)
+y = np.linspace(-3, 3, 100)
+X, Y = np.meshgrid(x, y)
+
+Function
+Z = (X2 + Y2) * np.exp(-X2 - Y2)
+
+Plot
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+ax.plot_surface(X, Y, Z)
+
+plt.title("3D Function")
+plt.show()
+from sympy import symbols, diff, solve, exp
+
+x, y = symbols('x y')
+
+Function
+f = (x2 + y2) * exp(-x2 - y2)
+
+Partial derivatives
+fx = diff(f, x)
+fy = diff(f, y)
+
+Solve system
+critical_points = solve([fx, fy], (x, y))
+print("Stationary points:", critical_points)
+Evaluate function at stationary points
+import numpy as np
+
+def f_num(x, y):
+return (x2 + y2) * np.exp(-x2 - y2)
+
+for point in critical_points:
+px, py = float(point[0]), float(point[1])
+print(f"Point ({px}, {py}) -> value = {f_num(px, py)}")
+Contour plot
+plt.contour(X, Y, Z, levels=20)
+
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.title("Contour Plot")
+
+plt.grid()
+plt.show()

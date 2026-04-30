@@ -1,0 +1,29 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+Create x values
+x = np.linspace(-10, 10, 400)
+
+Define functions
+y1 = 0.5 * x2 - 2*x - 1
+y2 = 2 - x2
+
+Plot graphs
+plt.plot(x, y1, label="y1 = 0.5x^2 - 2x - 1")
+plt.plot(x, y2, label="y2 = 2 - x^2")
+
+Labels and legend
+plt.xlabel("x")
+plt.ylabel("y")
+plt.title("Graphs of two functions")
+plt.legend()
+plt.grid()
+
+plt.show()
+
+Solve intersection numerically
+from sympy import symbols, solve
+
+x_sym = symbols('x')
+solutions = solve(0.5x_sym**2 - 2x_sym - 1 - (2 - x_sym**2), x_sym)
+print("Intersection x values:", solutions)

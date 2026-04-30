@@ -1,0 +1,18 @@
+Parameters
+u = np.linspace(0, 2np.pi, 100)
+v = np.linspace(0, 2np.pi, 100)
+U, V = np.meshgrid(u, v)
+
+Parametric equations
+X = (4 + np.sin(2U)) * np.cos(V)
+Y = (4 + np.sin(2U)) * np.sin(V)
+Z = np.cos(2*U)
+
+Plot mesh
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+ax.plot_wireframe(X, Y, Z)
+
+plt.title("Parametric Surface")
+plt.show()

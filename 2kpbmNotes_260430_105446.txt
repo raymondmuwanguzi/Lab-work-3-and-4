@@ -1,0 +1,22 @@
+from mpl_toolkits.mplot3d import Axes3D
+
+Create grid
+x = np.linspace(-2, 2, 100)
+y = np.linspace(-2, 2, 100)
+X, Y = np.meshgrid(x, y)
+
+Define function
+Z = -5X**2Y + X2 + Y2 + X2Y + 2(X*Y + X2 + Y**2)
+
+Plot surface
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+ax.plot_surface(X, Y, Z)
+
+ax.set_xlabel('X')
+ax.set_ylabel('Y')
+ax.set_zlabel('Z')
+plt.title("3D Surface")
+
+plt.show()
