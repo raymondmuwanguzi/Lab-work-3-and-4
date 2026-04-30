@@ -1,0 +1,32 @@
+import numpy as np
+from skimage import measure
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+Define grid
+grid_size = 50
+x = np.linspace(-2, 2, grid_size)
+y = np.linspace(-2, 2, grid_size)
+z = np.linspace(-2, 2, grid_size)
+
+X, Y, Z = np.meshgrid(x, y, z)
+
+Define function
+F = -5*(X2*Y + X2Z + Y**2X + Y2*Z + Z2Y + Z**2X) + 2*(XY + XZ + Y*Z)
+
+Apply marching cubes
+verts, faces, _, _ = measure.marching_cubes(F, level=0)
+
+Plot
+fig = plt.figure(figsize=(8,8))
+ax = fig.add_subplot(111, projection='3d')
+
+mesh = Poly3DCollection(verts[faces])
+ax.add_collection3d(mesh)
+
+ax.set_xlim(0, grid_size)
+ax.set_ylim(0, grid_size)
+ax.set_zlim(0, grid_size)
+
+plt.title("Implicit Surface")
+plt.show()

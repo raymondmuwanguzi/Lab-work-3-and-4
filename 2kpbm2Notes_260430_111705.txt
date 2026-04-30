@@ -1,0 +1,56 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+Differential equation: y' = 2 - 4x - 2y
+def f(x, y):
+return 2 - 4x - 2y
+
+Exact solution
+def exact_solution(x):
+return 1 + 2np.exp(-4x) - 2*x
+
+Euler method
+def euler_method(a, b, y0, n):
+h = (b - a) / n
+x = np.linspace(a, b, n+1)
+y = np.zeros(n+1)
+y[0] = y0
+
+for i in range(n):
+y[i+1] = y[i] + h * f(x[i], y[i])
+
+return x, y
+
+Interval and initial condition
+a, b = -3, 4
+y0 = 1
+
+Exact values
+x_exact = np.linspace(a, b, 1000)
+y_exact = exact_solution(x_exact)
+
+Plot
+plt.figure(figsize=(10,6))
+plt.plot(x_exact, y_exact, label="Exact Solution", linewidth=2)
+
+Euler approximations
+steps_list = [10, 20, 50]
+errors = []
+
+for n in steps_list:
+x_euler, y_euler = euler_method(a, b, y0, n)
+plt.plot(x_euler, y_euler, marker='o', label=f"Euler n={n}")
+
+# Compute error
+y_true = exact_solution(x_euler)
+error = np.max(np.abs(y_true - y_euler))
+errors.append((n, error))
+
+plt.legend()
+plt.title("Exact vs Euler Approximation")
+plt.grid()
+plt.show()
+
+Print errors
+for n, err in errors:
+print(f"n={n}, max error = {err:.6f}")

@@ -1,0 +1,72 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.linspace(-3, 3, 100)
+y = np.linspace(-3, 3, 100)
+X, Y = np.meshgrid(x, y)
+
+Z = XYnp.exp(-X2 - Y2)
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.plot_surface(X, Y, Z)
+
+plt.title("Surface f(x,y)")
+plt.show()
+
+from scipy.optimize import fsolve
+
+Partial derivatives
+def equations(vars):
+x, y = vars
+fx = ynp.exp(-x2-y2)(1 - 2x**2)
+fy = xnp.exp(-x2-y2)(1 - 2y**2)
+return [fx, fy]
+
+solutions = []
+
+guesses = [(0,0), (1,1), (-1,-1), (1,-1), (-1,1)]
+
+for guess in guesses:
+sol = fsolve(equations, guess)
+solutions.append(sol)
+
+Remove duplicates
+unique = np.unique(np.round(solutions, 3), axis=0)
+
+print("Stationary points:")
+print(unique)
+
+def f(x, y):
+return xynp.exp(-x2 - y2)
+
+for point in unique:
+val = f(point[0], point[1])
+print(f"Point {point} -> f = {val:.6f}")
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+levels = [-0.2, -0.1, 0, 0.1, 0.2]
+
+for level in levels:
+ax.contour(X, Y, Z, levels=[level], offset=level)
+
+plt.title("Level Curves in 3D")
+plt.show()
+
+plt.figure(figsize=(6,6))
+
+Contours
+contours = plt.contour(X, Y, Z, levels=20)
+
+Constraint: x^2 + y^2 = 0.5
+theta = np.linspace(0, 2*np.pi, 200)
+x_c = np.sqrt(0.5)*np.cos(theta)
+y_c = np.sqrt(0.5)*np.sin(theta)
+
+plt.plot(x_c, y_c, 'r', linewidth=3)
+
+plt.title("Contour Plot with Constraint")
+plt.axis('equal')
+plt.show()

@@ -1,0 +1,34 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+t = np.linspace(0, 2*np.pi, 1000)
+
+Parametric equations
+x = (4 + np.sin(20t)) * np.cos(t)
+y = (4 + np.sin(20t)) * np.sin(t)
+z = np.cos(20*t)
+
+fig = plt.figure(figsize=(10,6))
+ax = fig.add_subplot(111, projection='3d')
+
+First curve
+ax.plot(x, y, z, color='blue')
+
+Second copy
+ax.plot(x+10, y, z, color='green')
+
+Tangents
+for t0 in np.arange(0, 2np.pi, 0.1):
+dx = -np.sin(t0)(4 + np.sin(20t0)) + np.cos(t0)20np.cos(20t0)
+dy = np.cos(t0)(4 + np.sin(20t0)) + np.sin(t0)20np.cos(20t0)
+dz = -20np.sin(20*t0)
+
+x0 = (4 + np.sin(20*t0))np.cos(t0) + 10
+y0 = (4 + np.sin(20t0))np.sin(t0)
+z0 = np.cos(20t0)
+
+s = np.linspace(-0.2, 0.2, 10)
+ax.plot(x0 + dxs, y0 + dys, z0 + dz*s, color='red')
+
+plt.title("Toroidal Spiral with Tangents")
+plt.show()
