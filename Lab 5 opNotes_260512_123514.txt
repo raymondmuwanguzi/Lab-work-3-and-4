@@ -1,0 +1,252 @@
+#include <iostream>
+#include <ctime>
+#include <cstdlib>
+
+using namespace std;
+
+// ======================================================
+// TEMPLATE FUNCTIONS
+// ======================================================
+
+// Initialization with random numbers
+template <class T>
+void initArray(T* arr, int size)
+{
+for (int i = 0; i < size; i++)
+{
+arr[i] = rand() % 100 - 50; // from -50 to 49
+}
+}
+
+// Explicit overload for char
+void initArray(char* arr, int size)
+{
+cout << "Enter symbols for char array:" << endl;
+
+for (int i = 0; i < size; i++)
+{
+cin >> arr[i];
+}
+}
+
+// Output array
+template <class T>
+void printArray(T* arr, int size)
+{
+for (int i = 0; i < size; i++)
+{
+cout << arr[i] << "\t";
+}
+
+cout << endl;
+}
+
+// Find elements not greater than n
+template <class T>
+void findElements(T* arr, int size, T n)
+{
+cout << "Elements <= " << n << ":" << endl;
+
+bool found = false;
+
+for (int i = 0; i < size; i++)
+{
+if (arr[i] <= n)
+{
+cout << arr[i] << "\t";
+found = true;
+}
+}
+
+if (!found)
+{
+cout << "No such elements";
+}
+
+cout << endl;
+}
+
+// ======================================================
+// TEMPLATE CLASS
+// ======================================================
+
+template <class T>
+class Array
+{
+private:
+int n; // array size
+T* Bp; // beginning pointer
+T* Tp; // working pointer
+
+public:
+
+// Constructor
+Array(int size)
+{
+n = size;
+
+Bp = new T[n];
+
+for (int i = 0; i < n; i++)
+{
+Bp[i] = rand() % 100 - 50; // positive and negative
+}
+
+Tp = Bp;
+}
+
+// Destructor
+~Array()
+{
+delete[] Bp;
+}
+
+// Print array
+void print()
+{
+cout << "Array:" << endl;
+
+Tp = Bp;
+
+for (int i = 0; i < n; i++)
+{
+cout << *Tp << "\t";
+Tp++;
+}
+
+cout << endl;
+}
+
+// Find maximum positive element
+T* findMaxPositive()
+{
+T* maxPtr = nullptr;
+
+Tp = Bp;
+
+for (int i = 0; i < n; i++)
+{
+if (*Tp > 0)
+{
+if (maxPtr == nullptr || *Tp > *maxPtr)
+{
+maxPtr = Tp;
+}
+}
+
+Tp++;
+}
+
+return maxPtr;
+}
+};
+
+// ======================================================
+// MAIN FUNCTION
+// ======================================================
+
+int main()
+{
+srand((unsigned)time(0));
+
+const int SIZE = 10;
+
+// ==================================================
+// int ARRAY
+// ==================================================
+
+int* intArr = new int[SIZE];
+
+initArray(intArr, SIZE);
+
+cout << "Integer array:" << endl;
+printArray(intArr, SIZE);
+
+findElements(intArr, SIZE, 20);
+
+cout << endl;
+
+// ==================================================
+// double ARRAY
+// ==================================================
+
+double* doubleArr = new double[SIZE];
+
+initArray(doubleArr, SIZE);
+
+cout << "Double array:" << endl;
+printArray(doubleArr, SIZE);
+
+findElements(doubleArr, SIZE, 10.5);
+
+cout << endl;
+
+// ==================================================
+// char ARRAY
+// ==================================================
+
+char* charArr = new char[SIZE];
+
+initArray(charArr, SIZE);
+
+cout << "Char array:" << endl;
+printArray(charArr, SIZE);
+
+findElements(charArr, SIZE, 'm');
+
+cout << endl;
+
+// ==================================================
+// TEMPLATE CLASS WITH int
+// ==================================================
+
+cout << "Template class with int:" << endl;
+
+Array<int> objInt(SIZE);
+
+objInt.print();
+
+int* maxInt = objInt.findMaxPositive();
+
+if (maxInt != nullptr)
+{
+cout << "Maximum positive element: " << *maxInt << endl;
+}
+else
+{
+cout << "Positive elements not found" << endl;
+}
+
+cout << endl;
+
+// ==================================================
+// TEMPLATE CLASS WITH double
+// ==================================================
+
+cout << "Template class with double:" << endl;
+
+Array<double> objDouble(SIZE);
+
+objDouble.print();
+
+double* maxDouble = objDouble.findMaxPositive();
+
+if (maxDouble != nullptr)
+{
+cout << "Maximum positive element: " << *maxDouble << endl;
+}
+else
+{
+cout << "Positive elements not found" << endl;
+}
+
+// ==================================================
+// MEMORY CLEANUP
+// ==================================================
+
+delete[] intArr;
+delete[] doubleArr;
+delete[] charArr;
+
+return 0;
+}
