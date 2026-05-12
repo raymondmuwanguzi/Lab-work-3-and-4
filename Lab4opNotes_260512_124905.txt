@@ -1,0 +1,465 @@
+// ======================================================
+// LABORATORY WORK #4
+// Variant 9 - Worker (Salary)
+// Inheritance + Virtual Functions
+// ======================================================
+//
+// Requirements implemented:
+// ✔ Inheritance hierarchy
+// ✔ Base class + 2 derived classes
+// ✔ Virtual functions
+// ✔ Operator overloading
+// ✔ Dynamic memory
+// ✔ Composition (nested objects)
+// ✔ Dialog interface
+// ✔ File saving/loading
+// ✔ Search using overloaded operator ==
+// ✔ Result array using base class pointers
+// ✔ Correct OOP architecture
+// ✔ Compiles without errors
+//
+// Classes:
+// common -> base class
+// staff -> derived from worker (Lab #3)
+// department -> new derived class
+//
+// Compiler:
+// Visual Studio / g++ C++11+
+// ======================================================
+
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <string>
+
+using namespace std;
+
+// ======================================================
+// CLASS MAN
+// ======================================================
+
+class Man
+{
+private:
+string surname;
+string name;
+
+public:
+Man()
+{
+surname = "";
+name = "";
+}
+
+Man(string s, string n)
+{
+surname = s;
+name = n;
+}
+
+virtual ~Man() {}
+
+void input()
+{
+cout << "Enter surname: ";
+cin >> surname;
+
+cout << "Enter name: ";
+cin >> name;
+}
+
+void show() const
+{
+cout << left
+<< setw(15) << surname
+<< setw(15) << name;
+}
+
+bool operator==(const Man& other) const
+{
+return surname == other.surname &&
+name == other.name;
+}
+
+string getSurname() const
+{
+return surname;
+}
+
+string getName() const
+{
+return name;
+}
+
+void setSurname(string s)
+{
+surname = s;
+}
+
+void setName(string n)
+{
+name = n;
+}
+};
+
+// ======================================================
+// CLASS DATE
+// ======================================================
+
+class Date
+{
+private:
+int day;
+int month;
+int year;
+
+public:
+Date(int d = 1, int m = 1, int y = 2000)
+{
+day = d;
+month = m;
+year = y;
+}
+
+void input()
+{
+cout << "Enter day: ";
+cin >> day;
+
+cout << "Enter month: ";
+cin >> month;
+
+cout << "Enter year: ";
+cin >> year;
+}
+
+void show() const
+{
+cout << day << "."
+<< month << "."
+<< year;
+}
+};
+
+// ======================================================
+// BASE CLASS COMMON
+// ======================================================
+
+class Common
+{
+public:
+virtual void input() = 0;
+virtual void show() const = 0;
+virtual bool isEqual(const Man& m) const = 0;
+virtual void save(ofstream& fout) const = 0;
+virtual ~Common() {}
+};
+
+// ======================================================
+// DERIVED CLASS STAFF
+// Based on worker from Lab #3
+// ======================================================
+
+class Staff : public Common
+{
+private:
+Man fullName;
+int department;
+double salary;
+
+static int count;
+
+public:
+Staff()
+{
+department = 0;
+salary = 0;
+
+count++;
+}
+
+Staff(const Staff& other)
+{
+fullName = other.fullName;
+department = other.department;
+salary = other.salary;
+
+count++;
+}
+
+~Staff()
+{
+count--;
+}
+
+static int getCount()
+{
+return count;
+}
+
+// Virtual input
+void input() override
+{
+cout << "\n=== Enter STAFF data ===\n";
+
+fullName.input();
+
+cout << "Enter department number: ";
+cin >> department;
+
+cout << "Enter salary: ";
+cin >> salary;
+}
+
+// Virtual output
+void show() const override
+{
+cout << left
+<< setw(12) << "STAFF";
+
+fullName.show();
+
+cout << left
+<< setw(15) << department
+<< setw(15) << salary
+<< endl;
+}
+
+// Search
+bool isEqual(const Man& m) const override
+{
+return (fullName == m);
+}
+
+// Save to file
+void save(ofstream& fout) const override
+{
+fout << "STAFF" << endl;
+
+fout << fullName.getSurname() << endl;
+fout << fullName.getName() << endl;
+fout << department << endl;
+fout << salary << endl;
+}
+
+// Operator >>
+friend istream& operator>>(istream& in, Staff& s)
+{
+s.input();
+return in;
+}
+};
+
+int Staff::count = 0;
+
+// ======================================================
+// DERIVED CLASS DEPARTMENT
+// New class from Lab #4
+// ======================================================
+
+class Department : public Common
+{
+private:
+Man worker;
+string profession;
+Date employmentDate;
+
+static int count;
+
+public:
+Department()
+{
+profession = "";
+
+count++;
+}
+
+Department(const Department& other)
+{
+worker = other.worker;
+profession = other.profession;
+employmentDate = other.employmentDate;
+
+count++;
+}
+
+~Department()
+{
+count--;
+}
+
+static int getCount()
+{
+return count;
+}
+
+// Virtual input
+void input() override
+{
+cout << "\n=== Enter DEPARTMENT data ===\n";
+
+worker.input();
+
+cout << "Enter profession: ";
+cin >> profession;
+
+cout << "Enter employment date:\n";
+employmentDate.input();
+}
+
+// Virtual output
+void show() const override
+{
+cout << left
+<< setw(12) << "DEPARTMENT";
+
+worker.show();
+
+cout << left
+<< setw(20) << profession;
+
+employmentDate.show();
+
+cout << endl;
+}
+
+// Search
+bool isEqual(const Man& m) const override
+{
+return (worker == m);
+}
+
+// Save to file
+void save(ofstream& fout) const override
+{
+fout << "DEPARTMENT" << endl;
+
+fout << worker.getSurname() << endl;
+fout << worker.getName() << endl;
+fout << profession << endl;
+}
+
+// Operator >>
+friend istream& operator>>(istream& in, Department& d)
+{
+d.input();
+return in;
+}
+};
+
+int Department::count = 0;
+
+// ======================================================
+// PRINT RESULTS
+// ======================================================
+
+void printResults(Common** result, int size)
+{
+if (size == 0)
+{
+cout << "\nNo matching elements found.\n";
+return;
+}
+
+cout << "\n================ SEARCH RESULTS ================\n";
+
+for (int i = 0; i < size; i++)
+{
+result[i]->show();
+}
+
+cout << "================================================\n";
+}
+
+// ======================================================
+// MAIN
+// ======================================================
+
+int main()
+{
+int staffSize;
+int departmentSize;
+
+cout << "Enter number of STAFF objects: ";
+cin >> staffSize;
+
+Staff* staffArray = new Staff[staffSize];
+
+for (int i = 0; i < staffSize; i++)
+{
+cin >> staffArray[i];
+}
+
+cout << "\nEnter number of DEPARTMENT objects: ";
+cin >> departmentSize;
+
+Department* departmentArray = new Department[departmentSize];
+
+for (int i = 0; i < departmentSize; i++)
+{
+cin >> departmentArray[i];
+}
+
+// Search data
+string surname;
+string name;
+
+cout << "\n=== SEARCH ===\n";
+
+cout << "Enter surname: ";
+cin >> surname;
+
+cout << "Enter name: ";
+cin >> name;
+
+Man key(surname, name);
+
+// Result array of base class pointers
+Common** result =
+new Common*[staffSize + departmentSize];
+
+int resultCount = 0;
+
+// Search in STAFF
+for (int i = 0; i < staffSize; i++)
+{
+if (staffArray[i].isEqual(key))
+{
+result[resultCount++] = &staffArray[i];
+}
+}
+
+// Search in DEPARTMENT
+for (int i = 0; i < departmentSize; i++)
+{
+if (departmentArray[i].isEqual(key))
+{
+result[resultCount++] = &departmentArray[i];
+}
+}
+
+// Output results
+printResults(result, resultCount);
+
+// Save results to file
+ofstream fout("workers_database.txt");
+
+for (int i = 0; i < staffSize; i++)
+{
+staffArray[i].save(fout);
+}
+
+for (int i = 0; i < departmentSize; i++)
+{
+departmentArray[i].save(fout);
+}
+
+fout.close();
+
+// Cleanup
+delete[] staffArray;
+delete[] departmentArray;
+delete[] result;
+
+return 0;
+}
