@@ -1,0 +1,481 @@
+// ======================================================
+// LABORATORY WORK #3
+// Variant 9 - Worker (Salary)
+// ======================================================
+//
+// Requirements implemented:
+// ✔ Composition (nested class object)
+// ✔ Operator overloading (== and >>)
+// ✔ Dynamic memory
+// ✔ Static object counter
+// ✔ File save/load
+// ✔ Dialog interface
+// ✔ Table output
+// ✔ Correct OOP structure
+//
+// File used for database:
+// workers.txt
+//
+// Compiler:
+// Visual Studio / g++ (C++11+)
+// ======================================================
+
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <string>
+
+using namespace std;
+
+// ======================================================
+// CLASS MAN
+// ======================================================
+
+class Man
+{
+private:
+string surname;
+string name;
+
+public:
+// Default constructor
+Man()
+{
+surname = "";
+name = "";
+}
+
+// Constructor with parameters
+Man(string s, string n)
+{
+surname = s;
+name = n;
+}
+
+// Copy constructor
+Man(const Man& other)
+{
+surname = other.surname;
+name = other.name;
+}
+
+// Setters
+void setSurname(string s)
+{
+surname = s;
+}
+
+void setName(string n)
+{
+name = n;
+}
+
+// Getters
+string getSurname() const
+{
+return surname;
+}
+
+string getName() const
+{
+return name;
+}
+
+// Keyboard input
+void input()
+{
+cout << "Enter surname: ";
+cin >> surname;
+
+cout << "Enter name: ";
+cin >> name;
+}
+
+// Table output
+void show() const
+{
+cout << left
+<< setw(15) << surname
+<< setw(15) << name;
+}
+
+// Comparison operator
+bool operator==(const Man& other) const
+{
+return (surname == other.surname &&
+name == other.name);
+}
+};
+
+// ======================================================
+// CLASS WORKER
+// ======================================================
+
+class Worker
+{
+private:
+Man fullName; // nested object
+int department;
+double salary;
+
+static int count;
+
+public:
+// Default constructor
+Worker()
+{
+department = 0;
+salary = 0;
+
+count++;
+}
+
+// Constructor with parameters
+Worker(Man m, int d, double s)
+{
+fullName = m;
+department = d;
+salary = s;
+
+count++;
+}
+
+// Copy constructor
+Worker(const Worker& other)
+{
+fullName = other.fullName;
+department = other.department;
+salary = other.salary;
+
+count++;
+}
+
+// Destructor
+~Worker()
+{
+count--;
+}
+
+// Get object count
+static int getCount()
+{
+return count;
+}
+
+// ==================================================
+// OPERATOR >>
+// Keyboard input
+// ==================================================
+
+friend istream& operator>>(istream& in, Worker& w)
+{
+cout << "\n=== Enter worker data ===\n";
+
+w.fullName.input();
+
+cout << "Enter department: ";
+in >> w.department;
+
+cout << "Enter salary: ";
+in >> w.salary;
+
+return in;
+}
+
+// ==================================================
+// OPERATOR ==
+// Compare Worker with Man
+// ==================================================
+
+bool operator==(const Man& m) const
+{
+return (fullName == m);
+}
+
+// ==================================================
+// OUTPUT
+// ==================================================
+
+void show() const
+{
+fullName.show();
+
+cout << left
+<< setw(15) << department
+<< setw(15) << salary
+<< endl;
+}
+
+// ==================================================
+// FILE SAVE
+// ==================================================
+
+friend ofstream& operator<<(ofstream& fout, const Worker& w)
+{
+fout << w.fullName.getSurname() << endl;
+fout << w.fullName.getName() << endl;
+fout << w.department << endl;
+fout << w.salary << endl;
+
+return fout;
+}
+
+// ==================================================
+// FILE LOAD
+// ==================================================
+
+friend ifstream& operator>>(ifstream& fin, Worker& w)
+{
+string surname;
+string name;
+
+getline(fin, surname);
+
+if (surname.empty() && fin.eof())
+return fin;
+
+getline(fin, name);
+
+w.fullName.setSurname(surname);
+w.fullName.setName(name);
+
+fin >> w.department;
+fin >> w.salary;
+
+fin.ignore();
+
+return fin;
+}
+};
+
+// Static variable initialization
+int Worker::count = 0;
+
+// ======================================================
+// LOAD DATABASE FROM FILE
+// ======================================================
+
+void loadDatabase(Worker*& arr, int& size)
+{
+ifstream fin("workers.txt");
+
+if (!fin)
+{
+cout << "Database file not found.\n";
+return;
+}
+
+fin >> size;
+fin.ignore();
+
+if (size <= 0)
+return;
+
+arr = new Worker[size];
+
+for (int i = 0; i < size; i++)
+{
+fin >> arr[i];
+}
+
+fin.close();
+
+cout << "Database loaded successfully.\n";
+}
+
+// ======================================================
+// SAVE DATABASE TO FILE
+// ======================================================
+
+void saveDatabase(Worker* arr, int size)
+{
+ofstream fout("workers.txt");
+
+fout << size << endl;
+
+for (int i = 0; i < size; i++)
+{
+fout << arr[i];
+}
+
+fout.close();
+
+cout << "Database saved successfully.\n";
+}
+
+// ======================================================
+// ADD WORKERS
+// ======================================================
+
+void addWorkers(Worker*& arr, int& size)
+{
+int n;
+
+cout << "How many workers do you want to add? ";
+cin >> n;
+
+Worker* temp = new Worker[size + n];
+
+// Copy old data
+for (int i = 0; i < size; i++)
+{
+temp[i] = arr[i];
+}
+
+// Input new data
+for (int i = size; i < size + n; i++)
+{
+cin >> temp[i];
+}
+
+delete[] arr;
+
+arr = temp;
+
+size += n;
+
+cout << "Workers added successfully.\n";
+}
+
+// ======================================================
+// PRINT TABLE
+// ======================================================
+
+void printWorkers(Worker* arr, int size)
+{
+if (size == 0)
+{
+cout << "Database is empty.\n";
+return;
+}
+
+cout << "\n========================================================\n";
+
+cout << left
+<< setw(15) << "Surname"
+<< setw(15) << "Name"
+<< setw(15) << "Department"
+<< setw(15) << "Salary"
+<< endl;
+
+cout << "========================================================\n";
+
+for (int i = 0; i < size; i++)
+{
+arr[i].show();
+}
+
+cout << "========================================================\n";
+
+cout << "Total objects: "
+<< Worker::getCount()
+<< endl;
+}
+
+// ======================================================
+// SEARCH WORKER
+// ======================================================
+
+void findWorker(Worker* arr, int size)
+{
+if (size == 0)
+{
+cout << "Database is empty.\n";
+return;
+}
+
+string surname;
+string name;
+
+cout << "Enter surname to search: ";
+cin >> surname;
+
+cout << "Enter name to search: ";
+cin >> name;
+
+Man key(surname, name);
+
+bool found = false;
+
+cout << "\n================ SEARCH RESULTS ================\n";
+
+cout << left
+<< setw(15) << "Surname"
+<< setw(15) << "Name"
+<< setw(15) << "Department"
+<< setw(15) << "Salary"
+<< endl;
+
+cout << "================================================\n";
+
+for (int i = 0; i < size; i++)
+{
+if (arr[i] == key)
+{
+arr[i].show();
+found = true;
+}
+}
+
+if (!found)
+{
+cout << "Worker not found.\n";
+}
+}
+
+// ======================================================
+// MAIN FUNCTION
+// ======================================================
+
+int main()
+{
+Worker* workers = nullptr;
+
+int size = 0;
+
+// Load data from file
+loadDatabase(workers, size);
+
+int choice;
+
+do
+{
+cout << "\n=============== MENU ===============\n";
+cout << "1. Add workers\n";
+cout << "2. Show all workers\n";
+cout << "3. Find worker\n";
+cout << "0. Exit\n";
+cout << "====================================\n";
+
+cout << "Enter your choice: ";
+cin >> choice;
+
+switch (choice)
+{
+case 1:
+addWorkers(workers, size);
+break;
+
+case 2:
+printWorkers(workers, size);
+break;
+
+case 3:
+findWorker(workers, size);
+break;
+
+case 0:
+saveDatabase(workers, size);
+cout << "Program terminated.\n";
+break;
+
+default:
+cout << "Invalid choice.\n";
+}
+
+} while (choice != 0);
+
+delete[] workers;
+
+return 0;
+}
