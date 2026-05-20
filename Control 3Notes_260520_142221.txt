@@ -1,0 +1,557 @@
+#include <iostream>
+#include <cstring>
+#include <ctime>
+#include <iomanip>
+
+using namespace std;
+
+// Forward declarations
+class Product;
+class Category;
+class Customer;
+
+// ----------------------------- Product -----------------------------
+class Product {
+private:
+int code;
+char* name;
+float baseCost;
+public:
+Product();
+Product(int c, const char* n, float cost);
+~Product();
+Product(const Product& other);
+Product& operator=(const Product& other);
+
+int getCode() const;
+const char* getName() const;
+float getBaseCost() const;
+
+void setCode(int c);
+void setName(const char* n);
+void setBaseCost(float cost);
+};
+
+// ----------------------------- Category -----------------------------
+class Category {
+private:
+int code;
+char* name;
+public:
+Category();
+Category(int c, const char* n);
+~Category();
+Category(const Category& other);
+Category& operator=(const Category& other);
+
+int getCode() const;
+const char* getName() const;
+
+void setCode(int c);
+void setName(const char* n);
+};
+
+// ----------------------------- Customer (base class) -----------------------------
+class Customer {
+protected:
+char* firstName;
+char* lastName;
+char* phone;
+float baseDiscount; // in percent
+public:
+Customer();
+Customer(const char* fname, const char* lname, const char* ph, float discount);
+virtual ~Customer();
+Customer(const Customer& other);
+Customer& operator=(const Customer& other);
+
+// Getters
+const char* getFirstName() const;
+const char* getLastName() const;
+const char* getPhone() const;
+float getBaseDiscount() const;
+
+// Setters
+void setFirstName(const char* fname);
+void setLastName(const char* lname);
+void setPhone(const char* ph);
+void setBaseDiscount(float discount);
+
+// Pure virtual methods for polymorphism
+virtual float calculateDiscount(const Product& product, const Category& category) = 0;
+virtual float calculateFinalCost(const Product& product, const Category& category) = 0;
+virtual const char* getCustomerType() const = 0;
+};
+
+// ----------------------------- RegularCustomer -----------------------------
+class RegularCustomer : public Customer {
+public:
+RegularCustomer();
+RegularCustomer(const char* fname, const char* lname, const char* ph, float discount);
+~RegularCustomer();
+
+float calculateDiscount(const Product& product, const Category& category) override;
+float calculateFinalCost(const Product& product, const Category& category) override;
+const char* getCustomerType() const override;
+};
+
+// ----------------------------- PensionerCustomer -----------------------------
+class PensionerCustomer : public Customer {
+private:
+int discountStartHour;
+int discountEndHour;
+float extraDiscount; // percent
+public:
+PensionerCustomer();
+PensionerCustomer(const char* fname, const char* lname, const char* ph, float discount,
+int startHour, int endHour, float extraDisc);
+~PensionerCustomer();
+
+float calculateDiscount(const Product& product, const Category& category) override;
+float calculateFinalCost(const Product& product, const Category& category) override;
+const char* getCustomerType() const override;
+
+// Getters for extra data
+int getStartHour() const;
+int getEndHour() const;
+float getExtraDiscount() const;
+};
+
+// ----------------------------- VIPCustomer -----------------------------
+class VIPCustomer : public Customer {
+private:
+int* favoriteProducts; // array of product codes
+int favoriteCount;
+float extraDiscount; // percent on favorite products
+public:
+VIPCustomer();
+VIPCustomer(const char* fname, const char* lname, const char* ph, float discount,
+int* favProds, int count, float extraDisc);
+~VIPCustomer();
+VIPCustomer(const VIPCustomer& other);
+VIPCustomer& operator=(const VIPCustomer& other);
+
+float calculateDiscount(const Product& product, const Category& category) override;
+float calculateFinalCost(const Product& product, const Category& category) override;
+const char* getCustomerType() const override;
+
+bool isFavoriteProduct(int productCode) const;
+int getFavoriteCount() const;
+float getExtraDiscount() const;
+};
+
+// ----------------------------- Implementation of Product -----------------------------
+Product::Product() : code(0), name(nullptr), baseCost(0.0f) {}
+
+Product::Product(int c, const char* n, float cost) : code(c), baseCost(cost) {
+name = new char[strlen(n) + 1];
+strcpy(name, n);
+}
+
+Product::~Product() {
+delete[] name;
+}
+
+Product::Product(const Product& other) : code(other.code), baseCost(other.baseCost) {
+name = new char[strlen(other.name) + 1];
+strcpy(name, other.name);
+}
+
+Product& Product::operator=(const Product& other) {
+if (this != &other) {
+code = other.code;
+baseCost = other.baseCost;
+delete[] name;
+name = new char[strlen(other.name) + 1];
+strcpy(name, other.name);
+}
+return *this;
+}
+
+int Product::getCode() const { return code; }
+const char* Product::getName() const { return name; }
+float Product::getBaseCost() const { return baseCost; }
+
+void Product::setCode(int c) { code = c; }
+void Product::setName(const char* n) {
+delete[] name;
+name = new char[strlen(n) + 1];
+strcpy(name, n);
+}
+void Product::setBaseCost(float cost) { baseCost = cost; }
+
+// ----------------------------- Implementation of Category -----------------------------
+Category::Category() : code(0), name(nullptr) {}
+
+Category::Category(int c, const char* n) : code(c) {
+name = new char[strlen(n) + 1];
+strcpy(name, n);
+}
+
+Category::~Category() {
+delete[] name;
+}
+
+Category::Category(const Category& other) : code(other.code) {
+name = new char[strlen(other.name) + 1];
+strcpy(name, other.name);
+}
+
+Category& Category::operator=(const Category& other) {
+if (this != &other) {
+code = other.code;
+delete[] name;
+name = new char[strlen(other.name) + 1];
+strcpy(name, other.name);
+}
+return *this;
+}
+
+int Category::getCode() const { return code; }
+const char* Category::getName() const { return name; }
+void Category::setCode(int c) { code = c; }
+void Category::setName(const char* n) {
+delete[] name;
+name = new char[strlen(n) + 1];
+strcpy(name, n);
+}
+
+// ----------------------------- Implementation of Customer -----------------------------
+Customer::Customer() : firstName(nullptr), lastName(nullptr), phone(nullptr), baseDiscount(0.0f) {}
+
+Customer::Customer(const char* fname, const char* lname, const char* ph, float discount) : baseDiscount(discount) {
+firstName = new char[strlen(fname) + 1];
+lastName = new char[strlen(lname) + 1];
+phone = new char[strlen(ph) + 1];
+strcpy(firstName, fname);
+strcpy(lastName, lname);
+strcpy(phone, ph);
+}
+
+Customer::~Customer() {
+delete[] firstName;
+delete[] lastName;
+delete[] phone;
+}
+
+Customer::Customer(const Customer& other) : baseDiscount(other.baseDiscount) {
+firstName = new char[strlen(other.firstName) + 1];
+lastName = new char[strlen(other.lastName) + 1];
+phone = new char[strlen(other.phone) + 1];
+strcpy(firstName, other.firstName);
+strcpy(lastName, other.lastName);
+strcpy(phone, other.phone);
+}
+
+Customer& Customer::operator=(const Customer& other) {
+if (this != &other) {
+baseDiscount = other.baseDiscount;
+delete[] firstName; delete[] lastName; delete[] phone;
+firstName = new char[strlen(other.firstName) + 1];
+lastName = new char[strlen(other.lastName) + 1];
+phone = new char[strlen(other.phone) + 1];
+strcpy(firstName, other.firstName);
+strcpy(lastName, other.lastName);
+strcpy(phone, other.phone);
+}
+return *this;
+}
+
+const char* Customer::getFirstName() const { return firstName; }
+const char* Customer::getLastName() const { return lastName; }
+const char* Customer::getPhone() const { return phone; }
+float Customer::getBaseDiscount() const { return baseDiscount; }
+
+void Customer::setFirstName(const char* fname) {
+delete[] firstName;
+firstName = new char[strlen(fname) + 1];
+strcpy(firstName, fname);
+}
+void Customer::setLastName(const char* lname) {
+delete[] lastName;
+lastName = new char[strlen(lname) + 1];
+strcpy(lastName, lname);
+}
+void Customer::setPhone(const char* ph) {
+delete[] phone;
+phone = new char[strlen(ph) + 1];
+strcpy(phone, ph);
+}
+void Customer::setBaseDiscount(float discount) { baseDiscount = discount; }
+
+// ----------------------------- RegularCustomer -----------------------------
+RegularCustomer::RegularCustomer() : Customer() {}
+RegularCustomer::RegularCustomer(const char* fname, const char* lname, const char* ph, float discount)
+: Customer(fname, lname, ph, discount) {}
+RegularCustomer::~RegularCustomer() {}
+
+float RegularCustomer::calculateDiscount(const Product& product, const Category& category) {
+// No extra discount, just base
+return getBaseDiscount();
+}
+
+float RegularCustomer::calculateFinalCost(const Product& product, const Category& category) {
+float discountPercent = calculateDiscount(product, category);
+float finalCost = product.getBaseCost() * (1.0f - discountPercent / 100.0f);
+return finalCost;
+}
+
+const char* RegularCustomer::getCustomerType() const {
+return "Regular";
+}
+
+// ----------------------------- PensionerCustomer -----------------------------
+PensionerCustomer::PensionerCustomer() : Customer(), discountStartHour(0), discountEndHour(0), extraDiscount(0) {}
+PensionerCustomer::PensionerCustomer(const char* fname, const char* lname, const char* ph, float discount,
+int startHour, int endHour, float extraDisc)
+: Customer(fname, lname, ph, discount), discountStartHour(startHour), discountEndHour(endHour), extraDiscount(extraDisc) {}
+PensionerCustomer::~PensionerCustomer() {}
+
+float PensionerCustomer::calculateDiscount(const Product& product, const Category& category) {
+time_t now = time(0);
+tm* ltm = localtime(&now);
+int currentHour = ltm->tm_hour;
+
+float totalDiscount = getBaseDiscount();
+if (currentHour >= discountStartHour && currentHour < discountEndHour) {
+totalDiscount += extraDiscount;
+}
+return totalDiscount;
+}
+
+float PensionerCustomer::calculateFinalCost(const Product& product, const Category& category) {
+float discountPercent = calculateDiscount(product, category);
+return product.getBaseCost() * (1.0f - discountPercent / 100.0f);
+}
+
+const char* PensionerCustomer::getCustomerType() const {
+return "Pensioner";
+}
+
+int PensionerCustomer::getStartHour() const { return discountStartHour; }
+int PensionerCustomer::getEndHour() const { return discountEndHour; }
+float PensionerCustomer::getExtraDiscount() const { return extraDiscount; }
+
+// ----------------------------- VIPCustomer -----------------------------
+VIPCustomer::VIPCustomer() : Customer(), favoriteProducts(nullptr), favoriteCount(0), extraDiscount(0) {}
+VIPCustomer::VIPCustomer(const char* fname, const char* lname, const char* ph, float discount,
+int* favProds, int count, float extraDisc)
+: Customer(fname, lname, ph, discount), favoriteCount(count), extraDiscount(extraDisc) {
+favoriteProducts = new int[count];
+for (int i = 0; i < count; i++) {
+favoriteProducts[i] = favProds[i];
+}
+}
+VIPCustomer::~VIPCustomer() {
+delete[] favoriteProducts;
+}
+VIPCustomer::VIPCustomer(const VIPCustomer& other) : Customer(other), favoriteCount(other.favoriteCount), extraDiscount(other.extraDiscount) {
+favoriteProducts = new int[favoriteCount];
+for (int i = 0; i < favoriteCount; i++) {
+favoriteProducts[i] = other.favoriteProducts[i];
+}
+}
+VIPCustomer& VIPCustomer::operator=(const VIPCustomer& other) {
+if (this != &other) {
+Customer::operator=(other);
+delete[] favoriteProducts;
+favoriteCount = other.favoriteCount;
+extraDiscount = other.extraDiscount;
+favoriteProducts = new int[favoriteCount];
+for (int i = 0; i < favoriteCount; i++) {
+favoriteProducts[i] = other.favoriteProducts[i];
+}
+}
+return *this;
+}
+
+bool VIPCustomer::isFavoriteProduct(int productCode) const {
+for (int i = 0; i < favoriteCount; i++) {
+if (favoriteProducts[i] == productCode) return true;
+}
+return false;
+}
+
+float VIPCustomer::calculateDiscount(const Product& product, const Category& category) {
+float totalDiscount = getBaseDiscount();
+if (isFavoriteProduct(product.getCode())) {
+totalDiscount += extraDiscount;
+}
+return totalDiscount;
+}
+
+float VIPCustomer::calculateFinalCost(const Product& product, const Category& category) {
+float discountPercent = calculateDiscount(product, category);
+return product.getBaseCost() * (1.0f - discountPercent / 100.0f);
+}
+
+const char* VIPCustomer::getCustomerType() const {
+return "VIP";
+}
+
+int VIPCustomer::getFavoriteCount() const { return favoriteCount; }
+float VIPCustomer::getExtraDiscount() const { return extraDiscount; }
+
+// ----------------------------- Helper function to get current time as string -----------------------------
+string getCurrentDateTime() {
+time_t now = time(0);
+tm* ltm = localtime(&now);
+char buffer[80];
+strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", ltm);
+return string(buffer);
+}
+
+// ----------------------------- Main demo -----------------------------
+int main() {
+// 1. Create products and categories
+Category categories[] = {
+Category(1, "Electronics"),
+Category(2, "Clothing"),
+Category(3, "Books")
+};
+int numCategories = 3;
+
+Product products[] = {
+Product(101, "Laptop", 1000.0f),
+Product(102, "T-Shirt", 20.0f),
+Product(103, "C++ Book", 50.0f)
+};
+int numProducts = 3;
+
+// Map product to category (simplified: product code -> category index)
+// Let's say: Laptop->Electronics, T-Shirt->Clothing, Book->Books
+int productToCategory[] = {0, 1, 2}; // index in categories array
+
+// 2. Create dynamic arrays for each customer type
+// Regular customers
+RegularCustomer* regCustomers = new RegularCustomer[2];
+regCustomers[0] = RegularCustomer("Alice", "Smith", "111-222", 5.0f);
+regCustomers[1] = RegularCustomer("Bob", "Brown", "333-444", 10.0f);
+int numReg = 2;
+
+// Pensioner customers
+PensionerCustomer* penCustomers = new PensionerCustomer[2];
+penCustomers[0] = PensionerCustomer("Charlie", "White", "555-666", 15.0f, 9, 12, 5.0f); // extra 5% 9-12
+penCustomers[1] = PensionerCustomer("Diana", "Green", "777-888", 10.0f, 10, 14, 7.0f);
+int numPen = 2;
+
+// VIP customers
+int fav1[] = {101, 103};
+int fav2[] = {102};
+VIPCustomer* vipCustomers = new VIPCustomer[2];
+vipCustomers[0] = VIPCustomer("Eve", "Black", "999-000", 20.0f, fav1, 2, 10.0f);
+vipCustomers[1] = VIPCustomer("Frank", "Blue", "123-456", 25.0f, fav2, 1, 15.0f);
+int numVip = 2;
+
+// 3. Ask user for product code
+int searchCode;
+cout << "Enter product code: ";
+cin >> searchCode;
+
+// Find product and its category
+int prodIndex = -1;
+int catIndex = -1;
+for (int i = 0; i < numProducts; i++) {
+if (products[i].getCode() == searchCode) {
+prodIndex = i;
+catIndex = productToCategory[i];
+break;
+}
+}
+if (prodIndex == -1) {
+cout << "Product not found!" << endl;
+// Cleanup
+delete[] regCustomers;
+delete[] penCustomers;
+delete[] vipCustomers;
+return 1;
+}
+
+Product& selectedProduct = products[prodIndex];
+Category& selectedCategory = categories[catIndex];
+
+string datetime = getCurrentDateTime();
+
+// 4. Output for all customers
+// Regular customers
+for (int i = 0; i < numReg; i++) {
+float discount = regCustomers[i].calculateDiscount(selectedProduct, selectedCategory);
+float finalCost = regCustomers[i].calculateFinalCost(selectedProduct, selectedCategory);
+
+cout << datetime << ""
+<< regCustomers[i].getFirstName() << " " << regCustomers[i].getLastName() << ""
+<< regCustomers[i].getCustomerType() << ""
+<< selectedCategory.getCode() << ""
+<< selectedCategory.getName() << ""
+<< selectedProduct.getCode() << ""
+<< selectedProduct.getName() << "_"
+<< discount << endl;
+
+cout << datetime << ""
+<< regCustomers[i].getFirstName() << " " << regCustomers[i].getLastName() << ""
+<< regCustomers[i].getCustomerType() << ""
+<< selectedCategory.getCode() << ""
+<< selectedCategory.getName() << ""
+<< selectedProduct.getCode() << ""
+<< selectedProduct.getName() << ""
+<< selectedProduct.getBaseCost() << ""
+<< finalCost << endl;
+}
+
+// Pensioner customers
+for (int i = 0; i < numPen; i++) {
+float discount = penCustomers[i].calculateDiscount(selectedProduct, selectedCategory);
+float finalCost = penCustomers[i].calculateFinalCost(selectedProduct, selectedCategory);
+
+cout << datetime << ""
+<< penCustomers[i].getFirstName() << " " << penCustomers[i].getLastName() << ""
+<< penCustomers[i].getCustomerType() << ""
+<< selectedCategory.getCode() << ""
+<< selectedCategory.getName() << ""
+<< selectedProduct.getCode() << ""
+<< selectedProduct.getName() << "_"
+<< discount << endl;
+
+cout << datetime << ""
+<< penCustomers[i].getFirstName() << " " << penCustomers[i].getLastName() << ""
+<< penCustomers[i].getCustomerType() << ""
+<< selectedCategory.getCode() << ""
+<< selectedCategory.getName() << ""
+<< selectedProduct.getCode() << ""
+<< selectedProduct.getName() << ""
+<< selectedProduct.getBaseCost() << ""
+<< finalCost << endl;
+}
+
+// VIP customers
+for (int i = 0; i < numVip; i++) {
+float discount = vipCustomers[i].calculateDiscount(selectedProduct, selectedCategory);
+float finalCost = vipCustomers[i].calculateFinalCost(selectedProduct, selectedCategory);
+
+cout << datetime << ""
+<< vipCustomers[i].getFirstName() << " " << vipCustomers[i].getLastName() << ""
+<< vipCustomers[i].getCustomerType() << ""
+<< selectedCategory.getCode() << ""
+<< selectedCategory.getName() << ""
+<< selectedProduct.getCode() << ""
+<< selectedProduct.getName() << "_"
+<< discount << endl;
+
+cout << datetime << ""
+<< vipCustomers[i].getFirstName() << " " << vipCustomers[i].getLastName() << ""
+<< vipCustomers[i].getCustomerType() << ""
+<< selectedCategory.getCode() << ""
+<< selectedCategory.getName() << ""
+<< selectedProduct.getCode() << ""
+<< selectedProduct.getName() << ""
+<< selectedProduct.getBaseCost() << ""
+<< finalCost << endl;
+}
+
+// Cleanup
+delete[] regCustomers;
+delete[] penCustomers;
+delete[] vipCustomers;
+
+return 0;
+}
