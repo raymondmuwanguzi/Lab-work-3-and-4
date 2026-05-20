@@ -1,0 +1,214 @@
+#include <iostream>
+#include <string>
+#include <ctime>
+
+using namespace std;
+
+// ================= CATEGORY =================
+class Category {
+int id;
+string name;
+
+public:
+Category(int i = 0, string n = "") : id(i), name(n) {}
+
+int getId() { return id; }
+string getName() { return name; }
+};
+
+// ================= PRODUCT =================
+class Product {
+int id;
+string name;
+float price;
+Category category;
+
+public:
+Product(int i = 0, string n = "", float p = 0, Category c = Category())
+: id(i), name(n), price(p), category(c) {
+}
+
+int getId() { return id; }
+string getName() { return name; }
+float getPrice() { return price; }
+Category getCategory() { return category; }
+};
+
+// ================= CUSTOMER =================
+class Customer {
+protected:
+string firstName, lastName, phone;
+float baseDiscount;
+
+public:
+Customer(string fn, string ln, string ph, float bd)
+: firstName(fn), lastName(ln), phone(ph), baseDiscount(bd) {
+}
+
+virtual float getDiscount(Product& p) = 0;
+virtual string getType() = 0;
+
+float finalPrice(Product& p) {
+return p.getPrice() * (1 - getDiscount(p) / 100);
+}
+
+string fullName() {
+return firstName + " " + lastName;
+}
+};
+
+// ================= REGULAR =================
+class RegularCustomer : public Customer {
+public:
+RegularCustomer(string fn, string ln, string ph, float bd)
+: Customer(fn, ln, ph, bd) {
+}
+
+float getDiscount(Product&) override {
+return baseDiscount;
+}
+
+string getType() override {
+return "Regular";
+}
+};
+
+// ================= PENSIONER =================
+class PensionerCustomer : public Customer {
+int startHour, endHour;
+float extraDiscount;
+
+public:
+PensionerCustomer(string fn, string ln, string ph,
+float bd, int sh, int eh, float ed)
+: Customer(fn, ln, ph, bd),
+startHour(sh), endHour(eh), extraDiscount(ed) {
+}
+
+float getDiscount(Product&) override {
+time_t now = time(0);
+tm t;
+localtime_s(&t, &now);
+
+if (t.tm_hour >= startHour && t.tm_hour <= endHour)
+return baseDiscount + extraDiscount;
+
+return baseDiscount;
+}
+
+string getType() override {
+return "Pensioner";
+}
+};
+
+// ================= VIP =================
+class VipCustomer : public Customer {
+int favoriteProduct;
+float extraDiscount;
+
+public:
+VipCustomer(string fn, string ln, string ph,
+float bd, int fp, float ed)
+: Customer(fn, ln, ph, bd),
+favoriteProduct(fp), extraDiscount(ed) {
+}
+
+float getDiscount(Product& p) override {
+if (p.getId() == favoriteProduct)
+return baseDiscount + extraDiscount;
+
+return baseDiscount;
+}
+
+string getType() override {
+return "VIP";
+}
+};
+
+// ================= DATE =================
+void printDate() {
+time_t now = time(0);
+tm t;
+localtime_s(&t, &now);
+
+cout << t.tm_mday << "."
+<< t.tm_mon + 1 << "."
+<< t.tm_year + 1900 << "_"
+<< t.tm_hour << ":"
+<< t.tm_min << ":"
+<< t.tm_sec;
+}
+
+// ================= MAIN =================
+int main() {
+
+Category food(1, "Food");
+
+Product products[] = {
+Product(101, "Milk", 50, food),
+Product(102, "Bread", 30, food)
+};
+
+RegularCustomer regulars[] = {
+{"John","Smith","111",5}
+};
+
+PensionerCustomer pensioners[] = {
+{"Bob","White","222",5,9,12,10}
+};
+
+VipCustomer vips[] = {
+{"Mike","Black","333",10,101,15}
+};
+
+int code;
+cout << "Enter product code: ";
+cin >> code;
+
+Product* p = nullptr;
+
+for (auto& product : products)
+if (product.getId() == code)
+p = &product;
+
+if (!p) {
+cout << "Product not found!";
+return 0;
+}
+
+Customer* customers[] = {
+&regulars[0],
+&pensioners[0],
+&vips[0]
+};
+
+for (Customer* c : customers) {
+
+float discount = c->getDiscount(*p);
+
+printDate();
+
+cout << ""
+<< c->fullName() << ""
+<< c->getType() << ""
+<< p->getCategory().getId() << ""
+<< p->getCategory().getName() << ""
+<< p->getId() << ""
+<< p->getName() << "_"
+<< discount << "%\n";
+
+printDate();
+
+cout << ""
+<< c->fullName() << ""
+<< c->getType() << ""
+<< p->getCategory().getId() << ""
+<< p->getCategory().getName() << ""
+<< p->getId() << ""
+<< p->getName() << ""
+<< p->getPrice() << ""
+<< c->finalPrice(*p) << "\n\n";
+}
+
+return 0;
+}
