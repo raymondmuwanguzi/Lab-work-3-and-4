@@ -1,0 +1,492 @@
+#include <iostream>
+#include <cstring>
+#include <ctime>
+
+using namespace std;
+
+// ================= CATEGORY =================
+class Category {
+private:
+int id;
+char* name;
+
+public:
+Category();
+Category(int, const char*);
+Category(const Category&);
+~Category();
+
+int getId() const;
+char* getName() const;
+
+void setId(int);
+void setName(const char*);
+};
+
+Category::Category() {
+id = 0;
+name = nullptr;
+}
+
+Category::Category(int id, const char* name) {
+this->id = id;
+
+this->name = new char[strlen(name) + 1];
+strcpy_s(this->name, strlen(name) + 1, name);
+}
+
+Category::Category(const Category& other) {
+id = other.id;
+
+name = new char[strlen(other.name) + 1];
+strcpy_s(name, strlen(other.name) + 1, other.name);
+}
+
+Category::~Category() {
+delete[] name;
+}
+
+int Category::getId() const {
+return id;
+}
+
+char* Category::getName() const {
+return name;
+}
+
+void Category::setId(int id) {
+this->id = id;
+}
+
+void Category::setName(const char* name) {
+delete[] this->name;
+
+this->name = new char[strlen(name) + 1];
+strcpy_s(this->name, strlen(name) + 1, name);
+}
+
+// ================= PRODUCT =================
+class Product {
+private:
+int id;
+char* name;
+float basePrice;
+Category category;
+
+public:
+Product();
+Product(int, const char*, float, Category);
+~Product();
+
+int getId() const;
+char* getName() const;
+float getBasePrice() const;
+Category getCategory() const;
+};
+
+Product::Product() {
+id = 0;
+name = nullptr;
+basePrice = 0;
+}
+
+Product::Product(int id, const char* name, float price, Category category) {
+this->id = id;
+this->basePrice = price;
+this->category = category;
+
+this->name = new char[strlen(name) + 1];
+strcpy_s(this->name, strlen(name) + 1, name);
+}
+
+Product::~Product() {
+delete[] name;
+}
+
+int Product::getId() const {
+return id;
+}
+
+char* Product::getName() const {
+return name;
+}
+
+float Product::getBasePrice() const {
+return basePrice;
+}
+
+Category Product::getCategory() const {
+return category;
+}
+
+// ================= CUSTOMER =================
+class Customer {
+protected:
+char* firstName;
+char* lastName;
+char* phone;
+float baseDiscount;
+
+public:
+Customer();
+Customer(const char*, const char*, const char*, float);
+virtual ~Customer();
+
+virtual float calculateDiscount(Product&) = 0;
+float calculateFinalPrice(Product&);
+
+virtual const char* getType() = 0;
+
+char* getFirstName() const;
+char* getLastName() const;
+};
+
+Customer::Customer() {
+firstName = nullptr;
+lastName = nullptr;
+phone = nullptr;
+baseDiscount = 0;
+}
+
+Customer::Customer(const char* fn, const char* ln, const char* ph, float bd) {
+baseDiscount = bd;
+
+firstName = new char[strlen(fn) + 1];
+strcpy_s(firstName, strlen(fn) + 1, fn);
+
+lastName = new char[strlen(ln) + 1];
+strcpy_s(lastName, strlen(ln) + 1, ln);
+
+phone = new char[strlen(ph) + 1];
+strcpy_s(phone, strlen(ph) + 1, ph);
+}
+
+Customer::~Customer() {
+delete[] firstName;
+delete[] lastName;
+delete[] phone;
+}
+
+float Customer::calculateFinalPrice(Product& product) {
+float discount = calculateDiscount(product);
+return product.getBasePrice() * (1 - discount / 100);
+}
+
+char* Customer::getFirstName() const {
+return firstName;
+}
+
+char* Customer::getLastName() const {
+return lastName;
+}
+
+// ================= REGULAR CUSTOMER =================
+class RegularCustomer : public Customer {
+public:
+RegularCustomer(const char*, const char*, const char*, float);
+
+float calculateDiscount(Product&) override;
+const char* getType() override;
+};
+
+RegularCustomer::RegularCustomer(
+const char* fn,
+const char* ln,
+const char* ph,
+float bd)
+: Customer(fn, ln, ph, bd) {
+}
+
+float RegularCustomer::calculateDiscount(Product&) {
+return baseDiscount;
+}
+
+const char* RegularCustomer::getType() {
+return "Regular";
+}
+
+// ================= PENSIONER =================
+class PensionerCustomer : public Customer {
+private:
+int startHour;
+int endHour;
+float extraDiscount;
+
+public:
+PensionerCustomer(
+const char*,
+const char*,
+const char*,
+float,
+int,
+int,
+float);
+
+float calculateDiscount(Product&) override;
+const char* getType() override;
+};
+
+PensionerCustomer::PensionerCustomer(
+const char* fn,
+const char* ln,
+const char* ph,
+float bd,
+int sh,
+int eh,
+float ed)
+: Customer(fn, ln, ph, bd) {
+
+startHour = sh;
+endHour = eh;
+extraDiscount = ed;
+}
+
+float PensionerCustomer::calculateDiscount(Product&) {
+time_t now = time(0);
+tm localTime;
+
+localtime_s(&localTime, &now);
+
+int currentHour = localTime.tm_hour;
+
+if (currentHour >= startHour && currentHour <= endHour) {
+return baseDiscount + extraDiscount;
+}
+
+return baseDiscount;
+}
+
+const char* PensionerCustomer::getType() {
+return "Pensioner";
+}
+
+// ================= VIP CUSTOMER =================
+class VipCustomer : public Customer {
+private:
+int favoriteProductId;
+float extraDiscount;
+
+public:
+VipCustomer(
+const char*,
+const char*,
+const char*,
+float,
+int,
+float);
+
+float calculateDiscount(Product&) override;
+const char* getType() override;
+};
+
+VipCustomer::VipCustomer(
+const char* fn,
+const char* ln,
+const char* ph,
+float bd,
+int favId,
+float ed)
+: Customer(fn, ln, ph, bd) {
+
+favoriteProductId = favId;
+extraDiscount = ed;
+}
+
+float VipCustomer::calculateDiscount(Product& product) {
+if (product.getId() == favoriteProductId) {
+return baseDiscount + extraDiscount;
+}
+
+return baseDiscount;
+}
+
+const char* VipCustomer::getType() {
+return "VIP";
+}
+
+// ================= DATE TIME =================
+void printCurrentDateTime() {
+time_t now = time(0);
+tm localTime;
+
+localtime_s(&localTime, &now);
+
+cout << localTime.tm_mday << "."
+<< localTime.tm_mon + 1 << "."
+<< localTime.tm_year + 1900 << "_"
+<< localTime.tm_hour << ":"
+<< localTime.tm_min << ":"
+<< localTime.tm_sec;
+}
+
+// ================= MAIN =================
+int main() {
+
+// Categories
+Category food(1, "Food");
+Category electronics(2, "Electronics");
+
+// Products
+Product products[3] = {
+Product(101, "Milk", 50, food),
+Product(102, "Bread", 30, food),
+Product(201, "Phone", 1000, electronics)
+};
+
+// Dynamic arrays of customers
+
+RegularCustomer* regulars = new RegularCustomer[2]{
+RegularCustomer("John", "Smith", "111111", 5),
+RegularCustomer("Alice", "Brown", "222222", 7)
+};
+
+PensionerCustomer* pensioners = new PensionerCustomer[2]{
+PensionerCustomer("Bob", "White", "333333", 5, 9, 12, 10),
+PensionerCustomer("Emma", "Green", "444444", 6, 9, 12, 8)
+};
+
+VipCustomer* vips = new VipCustomer[2]{
+VipCustomer("Michael", "Black", "555555", 10, 201, 15),
+VipCustomer("Sophia", "Wilson", "666666", 12, 101, 20)
+};
+
+int productCode;
+
+cout << "Enter product code: ";
+cin >> productCode;
+
+Product* selectedProduct = nullptr;
+
+for (int i = 0; i < 3; i++) {
+if (products[i].getId() == productCode) {
+selectedProduct = &products[i];
+break;
+}
+}
+
+if (selectedProduct == nullptr) {
+cout << "Product not found!" << endl;
+return 0;
+}
+
+cout << "\n===== DISCOUNTS =====\n";
+
+// Regular customers
+for (int i = 0; i < 2; i++) {
+
+float discount = regulars[i].calculateDiscount(*selectedProduct);
+
+printCurrentDateTime();
+
+cout << ""
+<< regulars[i].getFirstName() << " "
+<< regulars[i].getLastName() << ""
+<< regulars[i].getType() << ""
+<< selectedProduct->getCategory().getId() << ""
+<< selectedProduct->getCategory().getName() << ""
+<< selectedProduct->getId() << ""
+<< selectedProduct->getName() << "_"
+<< discount << "%" << endl;
+}
+
+// Pensioners
+for (int i = 0; i < 2; i++) {
+
+float discount = pensioners[i].calculateDiscount(*selectedProduct);
+
+printCurrentDateTime();
+
+cout << ""
+<< pensioners[i].getFirstName() << " "
+<< pensioners[i].getLastName() << ""
+<< pensioners[i].getType() << ""
+<< selectedProduct->getCategory().getId() << ""
+<< selectedProduct->getCategory().getName() << ""
+<< selectedProduct->getId() << ""
+<< selectedProduct->getName() << "_"
+<< discount << "%" << endl;
+}
+
+// VIP customers
+for (int i = 0; i < 2; i++) {
+
+float discount = vips[i].calculateDiscount(*selectedProduct);
+
+printCurrentDateTime();
+
+cout << ""
+<< vips[i].getFirstName() << " "
+<< vips[i].getLastName() << ""
+<< vips[i].getType() << ""
+<< selectedProduct->getCategory().getId() << ""
+<< selectedProduct->getCategory().getName() << ""
+<< selectedProduct->getId() << ""
+<< selectedProduct->getName() << "_"
+<< discount << "%" << endl;
+}
+
+cout << "\n===== FINAL PRICE =====\n";
+
+// Regular
+for (int i = 0; i < 2; i++) {
+
+float finalPrice = regulars[i].calculateFinalPrice(*selectedProduct);
+
+printCurrentDateTime();
+
+cout << ""
+<< regulars[i].getFirstName() << " "
+<< regulars[i].getLastName() << ""
+<< regulars[i].getType() << ""
+<< selectedProduct->getCategory().getId() << ""
+<< selectedProduct->getCategory().getName() << ""
+<< selectedProduct->getId() << ""
+<< selectedProduct->getName() << ""
+<< selectedProduct->getBasePrice() << ""
+<< finalPrice << endl;
+}
+
+// Pensioners
+for (int i = 0; i < 2; i++) {
+
+float finalPrice = pensioners[i].calculateFinalPrice(*selectedProduct);
+
+printCurrentDateTime();
+
+cout << ""
+<< pensioners[i].getFirstName() << " "
+<< pensioners[i].getLastName() << ""
+<< pensioners[i].getType() << ""
+<< selectedProduct->getCategory().getId() << ""
+<< selectedProduct->getCategory().getName() << ""
+<< selectedProduct->getId() << ""
+<< selectedProduct->getName() << ""
+<< selectedProduct->getBasePrice() << ""
+<< finalPrice << endl;
+}
+
+// VIP
+for (int i = 0; i < 2; i++) {
+
+float finalPrice = vips[i].calculateFinalPrice(*selectedProduct);
+
+printCurrentDateTime();
+
+cout << ""
+<< vips[i].getFirstName() << " "
+<< vips[i].getLastName() << ""
+<< vips[i].getType() << ""
+<< selectedProduct->getCategory().getId() << ""
+<< selectedProduct->getCategory().getName() << ""
+<< selectedProduct->getId() << ""
+<< selectedProduct->getName() << ""
+<< selectedProduct->getBasePrice() << ""
+<< finalPrice << endl;
+}
+
+delete[] regulars;
+delete[] pensioners;
+delete[] vips;
+
+return 0;
+}
