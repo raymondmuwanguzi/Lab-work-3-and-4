@@ -1,0 +1,55 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+Right-hand side of the differential equation
+f = lambda x, y: x * y
+
+Initial conditions
+x0 = 0
+y0 = 1
+
+Interval
+a = 0
+b = 1
+
+Initial number of partitions
+n0 = 4
+
+Required accuracy
+eps = 0.001
+
+Euler approximation
+x_euler, y_euler, n_used = euler_method(
+f,
+x0,
+y0,
+a,
+b,
+n0,
+eps
+)
+
+Exact solution
+exact_solution = np.exp(x_euler**2 / 2)
+
+Real error estimation
+real_error = np.max(np.abs(y_euler - exact_solution))
+
+print(f'Number of intervals used: {n_used}')
+print(f'Maximum real error: {real_error}')
+
+Plot comparison
+plt.figure(figsize=(10, 6))
+
+plt.plot(x_euler, y_euler, 'o-', label='Euler approximation')
+plt.plot(x_euler, exact_solution, '-', linewidth=2,
+label='Exact solution')
+
+plt.title('Euler Method vs Exact Solution')
+plt.xlabel('x')
+plt.ylabel('y')
+
+plt.grid(True)
+plt.legend()
+
+plt.show()

@@ -1,0 +1,67 @@
+import sympy as sp
+import numpy as np
+import matplotlib.pyplot as plt
+
+def picard_method(f_sym, x, y, x0, y0, n_iter, interval=(0, 1)):
+"""
+Picard successive approximation method.
+
+Parameters
+----------
+f_sym : symbolic function f(x, y)
+x, y : symbolic variables
+x0, y0 : initial conditions
+n_iter : number of iterations
+interval: plotting interval
+
+Returns
+-------
+approximations : list of approximations
+"""
+
+approximations = []
+
+# Zero approximation
+phi_prev = y0
+
+approximations.append(phi_prev)
+
+t = sp.Symbol('t')
+
+for n in range(1, n_iter + 1):
+
+phi_prev_t = sp.sympify(phi_prev).subs(x, t)
+
+integrand = f_sym.subs({x: t, y: phi_prev_t})
+
+phi_next = y0 + sp.integrate(integrand, (t, x0, x))
+
+phi_next = sp.simplify(phi_next)
+
+approximations.append(phi_next)
+
+phi_prev = phi_next
+
+# Plot approximations
+x_vals = np.linspace(interval[0], interval[1], 400)
+
+plt.figure(figsize=(10, 6))
+
+for i in range(1, len(approximations)):
+
+phi_func = sp.lambdify(x, approximations[i], 'numpy')
+
+y_vals = phi_func(x_vals)
+
+plt.plot(x_vals, y_vals, label=f'Iteration {i}')
+
+plt.title('Picard Successive Approximations')
+plt.xlabel('x')
+plt.ylabel('y')
+
+plt.grid(True)
+plt.legend()
+
+plt.show()
+
+return approximations

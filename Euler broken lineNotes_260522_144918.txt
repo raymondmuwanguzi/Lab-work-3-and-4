@@ -1,0 +1,90 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def euler_method(f, x0, y0, a, b, n0, eps):
+"""
+Euler broken-line method.
+
+Parameters
+----------
+f : function f(x, y)
+x0 : initial x value
+y0 : initial y value
+a,b : interval boundaries
+n0 : initial number of subintervals
+eps : required accuracy
+
+Returns
+-------
+x_final : grid points
+y_final : approximate solution
+n_final : final number of intervals
+"""
+
+def build_euler(n):
+
+h = (b - a) / n
+
+x = np.zeros(n + 1)
+y = np.zeros(n + 1)
+
+x[0] = x0
+y[0] = y0
+
+for k in range(n):
+
+x[k + 1] = x[k] + h
+y[k + 1] = y[k] + h * f(x[k], y[k])
+
+return x, y
+
+n = n0
+
+# First approximation
+x_prev, y_prev = build_euler(n)
+
+# Second approximation
+n2 = 2 * n
+x_curr, y_curr = build_euler(n2)
+
+first_x = x_prev.copy()
+first_y = y_prev.copy()
+
+second_x = x_curr.copy()
+second_y = y_curr.copy()
+
+# Accuracy control loop
+while True:
+
+# Compare values at common nodes
+diff = np.max(np.abs(y_curr[::2] - y_prev))
+
+if diff < eps:
+break
+
+x_prev, y_prev = x_curr, y_curr
+
+n2 *= 2
+
+x_curr, y_curr = build_euler(n2)
+
+x_final = x_curr
+y_final = y_curr
+n_final = n2
+
+# Plot Euler approximations
+plt.figure(figsize=(10, 6))
+
+plt.plot(first_x, first_y, 'o-', label=f'n = {n0}')
+plt.plot(second_x, second_y, 's-', label=f'n = {2*n0}')
+plt.plot(x_final, y_final, '-', linewidth=2,
+label=f'final n = {n_final}')
+
+plt.title('Euler Broken-Line Method')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+return x_final, y_final, n_final

@@ -1,0 +1,79 @@
+import sympy as sp
+import numpy as np
+import matplotlib.pyplot as plt
+
+Symbolic variables
+x = sp.Symbol('x')
+y = sp.Symbol('y')
+
+Differential equation
+f_sym = x * y
+
+Initial conditions
+x0 = 0
+y0 = 1
+
+Number of iterations
+n_iter = 5
+
+Picard approximations
+approximations = picard_method(
+f_sym,
+x,
+y,
+x0,
+y0,
+n_iter,
+interval=(0, 1)
+)
+
+Last approximation
+phi_final = approximations[-1]
+
+print('Final Picard approximation:')
+print(phi_final)
+
+Exact solution
+exact_solution = sp.exp(x**2 / 2)
+
+Numerical error estimation
+phi_func = sp.lambdify(x, phi_final, 'numpy')
+exact_func = sp.lambdify(x, exact_solution, 'numpy')
+
+x_vals = np.linspace(0, 1, 1000)
+
+error = np.max(
+np.abs(phi_func(x_vals) - exact_func(x_vals))
+)
+
+print(f'Maximum error: {error}')
+
+Plot all approximations
+plt.figure(figsize=(10, 6))
+
+for i in range(1, len(approximations)):
+
+phi_i_func = sp.lambdify(x, approximations[i], 'numpy')
+
+plt.plot(
+x_vals,
+phi_i_func(x_vals),
+label=f'Picard iteration {i}'
+)
+
+Plot exact solution
+plt.plot(
+x_vals,
+exact_func(x_vals),
+linewidth=3,
+label='Exact solution'
+)
+
+plt.title('Picard Method and Exact Solution')
+plt.xlabel('x')
+plt.ylabel('y')
+
+plt.grid(True)
+plt.legend()
+
+plt.show()
