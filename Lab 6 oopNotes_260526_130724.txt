@@ -1,0 +1,258 @@
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+// ================= CLASS FIO =================
+class fio {
+private:
+string surname;
+string name;
+
+public:
+fio() {
+surname = "";
+name = "";
+}
+
+fio(string s, string n) {
+surname = s;
+name = n;
+}
+
+string getSurname() const {
+return surname;
+}
+
+string getName() const {
+return name;
+}
+
+friend istream& operator>>(istream& in, fio& f) {
+cout << "Enter surname: ";
+in >> f.surname;
+
+if (f.surname.empty())
+throw string("Error: surname cannot be empty!");
+
+cout << "Enter name: ";
+in >> f.name;
+
+if (f.name.empty())
+throw string("Error: name cannot be empty!");
+
+return in;
+}
+
+friend ostream& operator<<(ostream& out, const fio& f) {
+out << f.surname << " " << f.name;
+return out;
+}
+
+bool operator==(const fio& other) const {
+return surname == other.surname &&
+name == other.name;
+}
+};
+
+// ================= CLASS LETTER =================
+class letter {
+private:
+fio sender;
+string senderAddress;
+
+fio recipient;
+string recipientAddress;
+
+double cost;
+
+public:
+letter() {
+senderAddress = "";
+recipientAddress = "";
+cost = 0;
+}
+
+double getCost() const {
+return cost;
+}
+
+// operator ==
+bool operator==(const fio& f) const {
+return sender == f;
+}
+
+// input
+friend istream& operator>>(istream& in, letter& l) {
+try {
+cout << "\n=== Enter sender information ===\n";
+in >> l.sender;
+
+cout << "Enter sender address: ";
+in.ignore();
+getline(in, l.senderAddress);
+
+if (l.senderAddress.empty())
+throw string("Error: sender address cannot be empty!");
+
+cout << "\n=== Enter recipient information ===\n";
+in >> l.recipient;
+
+cout << "Enter recipient address: ";
+in.ignore();
+getline(in, l.recipientAddress);
+
+if (l.recipientAddress.empty())
+throw string("Error: recipient address cannot be empty!");
+
+cout << "Enter letter cost: ";
+in >> l.cost;
+
+if (l.cost <= 0)
+throw string("Error: cost must be greater than 0!");
+}
+catch (...) {
+throw;
+}
+
+return in;
+}
+
+// output
+friend ostream& operator<<(ostream& out, const letter& l) {
+out << left
+<< setw(20) << (l.sender.getSurname() + " " + l.sender.getName())
+<< setw(25) << l.senderAddress
+<< setw(20) << (l.recipient.getSurname() + " " + l.recipient.getName())
+<< setw(25) << l.recipientAddress
+<< setw(10) << fixed << setprecision(2) << l.cost;
+
+return out;
+}
+};
+
+// ================= MAIN =================
+int main() {
+try {
+int n;
+
+cout << "Enter number of letters: ";
+cin >> n;
+
+if (n <= 0)
+throw string("Error: invalid number of letters!");
+
+vector<letter> arr(n);
+
+// INPUT
+for (int i = 0; i < n; i++) {
+cout << "\n==============================\n";
+cout << "Letter #" << i + 1 << endl;
+cin >> arr[i];
+}
+
+// OUTPUT ALL
+cout << "\n\n========== ALL LETTERS ==========\n";
+
+cout << left
+<< setw(20) << "Sender"
+<< setw(25) << "Sender Address"
+<< setw(20) << "Recipient"
+<< setw(25) << "Recipient Address"
+<< setw(10) << "Cost"
+<< endl;
+
+cout << string(100, '-') << endl;
+
+for (int i = 0; i < n; i++) {
+cout << arr[i] << endl;
+}
+
+// SEARCH BY COST
+double value;
+
+cout << "\nEnter minimum cost: ";
+cin >> value;
+
+if (value < 0)
+throw string("Error: invalid cost value!");
+
+vector<letter> Rez1;
+
+for (int i = 0; i < n; i++) {
+if (arr[i].getCost() > value) {
+Rez1.push_back(arr[i]);
+}
+}
+
+cout << "\n===== LETTERS WITH COST GREATER THAN "
+<< value << " =====\n";
+
+if (Rez1.empty()) {
+cout << "No letters found.\n";
+}
+else {
+cout << left
+<< setw(20) << "Sender"
+<< setw(25) << "Sender Address"
+<< setw(20) << "Recipient"
+<< setw(25) << "Recipient Address"
+<< setw(10) << "Cost"
+<< endl;
+
+cout << string(100, '-') << endl;
+
+for (size_t i = 0; i < Rez1.size(); i++) {
+cout << Rez1[i] << endl;
+}
+}
+
+// SEARCH BY SENDER
+fio searchPerson;
+
+cout << "\n===== SEARCH LETTERS BY SENDER =====\n";
+cin >> searchPerson;
+
+vector<letter> Rez2;
+
+for (int i = 0; i < n; i++) {
+if (arr[i] == searchPerson) {
+Rez2.push_back(arr[i]);
+}
+}
+
+cout << "\n===== SEARCH RESULT =====\n";
+
+if (Rez2.empty()) {
+cout << "Letters not found.\n";
+}
+else {
+cout << left
+<< setw(20) << "Sender"
+<< setw(25) << "Sender Address"
+<< setw(20) << "Recipient"
+<< setw(25) << "Recipient Address"
+<< setw(10) << "Cost"
+<< endl;
+
+cout << string(100, '-') << endl;
+
+for (size_t i = 0; i < Rez2.size(); i++) {
+cout << Rez2[i] << endl;
+}
+}
+}
+
+catch (string error) {
+cout << "\nEXCEPTION: " << error << endl;
+}
+
+catch (...) {
+cout << "\nUnknown error!\n";
+}
+
+system("pause");
+return 0;
+}
