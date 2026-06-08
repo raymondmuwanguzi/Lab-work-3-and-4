@@ -1,0 +1,390 @@
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <algorithm>
+
+using namespace std;
+
+// ================= CLASS FIO =================
+class fio {
+private:
+string surname;
+string name;
+
+public:
+fio() {
+surname = "";
+name = "";
+}
+
+fio(string s, string n) {
+surname = s;
+name = n;
+}
+
+string getSurname() const {
+return surname;
+}
+
+string getName() const {
+return name;
+}
+
+friend istream& operator>>(istream& in, fio& f) {
+cout << "Enter surname: ";
+in >> f.surname;
+
+if (f.surname.empty())
+throw string("Error: surname cannot be empty!");
+
+cout << "Enter name: ";
+in >> f.name;
+
+if (f.name.empty())
+throw string("Error: name cannot be empty!");
+
+return in;
+}
+
+friend ostream& operator<<(ostream& out, const fio& f) {
+out << f.surname << " " << f.name;
+return out;
+}
+
+bool operator==(const fio& other) const {
+return surname == other.surname &&
+name == other.name;
+}
+};
+
+// ================= CLASS LETTER =================
+class letter {
+private:
+fio sender;
+string senderAddress;
+
+fio recipient;
+string recipientAddress;
+
+double cost;
+
+public:
+letter() {
+senderAddress = "";
+recipientAddress = "";
+cost = 0;
+}
+
+double getCost() const {
+return cost;
+}
+
+fio getSender() const {
+return sender;
+}
+
+bool operator==(const fio& f) const {
+return sender == f;
+}
+
+// for transform
+letter increaseCost(double value) const {
+letter temp = *this;
+temp.cost += value;
+return temp;
+}
+
+friend istream& operator>>(istream& in, letter& l) {
+try {
+cout << "\n=== Enter sender information ===\n";
+in >> l.sender;
+
+cout << "Enter sender address: ";
+in.ignore();
+getline(in, l.senderAddress);
+
+if (l.senderAddress.empty())
+throw string("Error: sender address cannot be empty!");
+
+cout << "\n=== Enter recipient information ===\n";
+in >> l.recipient;
+
+cout << "Enter recipient address: ";
+in.ignore();
+getline(in, l.recipientAddress);
+
+if (l.recipientAddress.empty())
+throw string("Error: recipient address cannot be empty!");
+
+cout << "Enter letter cost: ";
+in >> l.cost;
+
+if (l.cost <= 0)
+throw string("Error: cost must be greater than 0!");
+}
+catch (...) {
+throw;
+}
+
+return in;
+}
+
+friend ostream& operator<<(ostream& out, const letter& l) {
+out << left
+<< setw(20) << (l.sender.getSurname() + " " + l.sender.getName())
+<< setw(25) << l.senderAddress
+<< setw(20) << (l.recipient.getSurname() + " " + l.recipient.getName())
+<< setw(25) << l.recipientAddress
+<< setw(10) << fixed << setprecision(2) << l.cost;
+
+return out;
+}
+
+// save to file
+friend ofstream& operator<<(ofstream& fout, const letter& l) {
+fout << l.sender.getSurname() << endl;
+fout << l.sender.getName() << endl;
+fout << l.senderAddress << endl;
+
+fout << l.recipient.getSurname() << endl;
+fout << l.recipient.getName() << endl;
+fout << l.recipientAddress << endl;
+
+fout << l.cost << endl;
+
+return fout;
+}
+
+// load from file
+friend ifstream& operator>>(ifstream& fin, letter& l) {
+string s1, n1, s2, n2;
+
+getline(fin, s1);
+getline(fin, n1);
+getline(fin, l.senderAddress);
+
+getline(fin, s2);
+getline(fin, n2);
+getline(fin, l.recipientAddress);
+
+fin >> l.cost;
+fin.ignore();
+
+l.sender = fio(s1, n1);
+l.recipient = fio(s2, n2);
+
+return fin;
+}
+};
+
+// ================= PRINT FUNCTION =================
+void printLetter(const letter& l) {
+cout << l << endl;
+}
+
+// ================= PREDICATE =================
+class GreaterCost {
+private:
+double value;
+
+public:
+GreaterCost(double v) {
+value = v;
+}
+
+bool operator()(const letter& l) {
+return l.getCost() > value;
+}
+};
+
+// ================= MAIN =================
+int main() {
+try {
+vector<letter> arr;
+
+// ================= LOAD FROM FILE =================
+ifstream fin("letters.txt");
+
+if (fin) {
+int n;
+fin >> n;
+fin.ignore();
+
+for (int i = 0; i < n; i++) {
+letter temp;
+fin >> temp;
+arr.push_back(temp);
+}
+
+fin.close();
+
+cout << "Data loaded from file.\n";
+}
+
+int choice;
+
+do {
+cout << "\n=========== MENU ===========\n";
+cout << "1. Add letters\n";
+cout << "2. Show all letters\n";
+cout << "3. Search by minimum cost\n";
+cout << "4. Search by sender\n";
+cout << "5. Increase all costs (transform)\n";
+cout << "0. Exit\n";
+cout << "Choose: ";
+cin >> choice;
+
+switch (choice) {
+
+case 1: {
+int n;
+
+cout << "Enter number of letters: ";
+cin >> n;
+
+if (n <= 0)
+throw string("Error: invalid number!");
+
+for (int i = 0; i < n; i++) {
+letter temp;
+
+cout << "\nLetter #" << i + 1 << endl;
+cin >> temp;
+
+arr.push_back(temp);
+}
+
+break;
+}
+
+case 2: {
+if (arr.empty()) {
+cout << "Container is empty.\n";
+break;
+}
+
+cout << "\n========== ALL LETTERS ==========\n";
+
+cout << left
+<< setw(20) << "Sender"
+<< setw(25) << "Sender Address"
+<< setw(20) << "Recipient"
+<< setw(25) << "Recipient Address"
+<< setw(10) << "Cost"
+<< endl;
+
+cout << string(100, '-') << endl;
+
+// STL for_each
+for_each(arr.begin(), arr.end(), printLetter);
+
+break;
+}
+
+case 3: {
+double value;
+
+cout << "Enter minimum cost: ";
+cin >> value;
+
+vector<letter>::iterator pos;
+
+pos = find_if(arr.begin(), arr.end(),
+GreaterCost(value));
+
+if (pos == arr.end()) {
+cout << "Letters not found.\n";
+}
+else {
+cout << "\nLetters found:\n";
+
+for (; pos != arr.end(); ++pos) {
+if (pos->getCost() > value)
+cout << *pos << endl;
+}
+}
+
+break;
+}
+
+case 4: {
+fio searchPerson;
+
+cout << "\n=== SEARCH BY SENDER ===\n";
+cin >> searchPerson;
+
+bool found = false;
+
+for (vector<letter>::iterator it = arr.begin();
+it != arr.end(); ++it) {
+
+if (*it == searchPerson) {
+cout << *it << endl;
+found = true;
+}
+}
+
+if (!found)
+cout << "Letters not found.\n";
+
+break;
+}
+
+case 5: {
+double add;
+
+cout << "Enter value to increase cost: ";
+cin >> add;
+
+vector<letter> result;
+
+// STL transform
+transform(arr.begin(), arr.end(),
+back_inserter(result),
+[add](letter l) {
+return l.increaseCost(add);
+});
+
+arr = result;
+
+cout << "All costs increased.\n";
+
+break;
+}
+
+case 0: {
+// ================= SAVE TO FILE =================
+ofstream fout("letters.txt");
+
+fout << arr.size() << endl;
+
+for (size_t i = 0; i < arr.size(); i++) {
+fout << arr[i];
+}
+
+fout.close();
+
+cout << "Data saved to file.\n";
+break;
+}
+
+default:
+cout << "Wrong choice!\n";
+}
+
+} while (choice != 0);
+}
+
+catch (string error) {
+cout << "\nEXCEPTION: " << error << endl;
+}
+
+catch (...) {
+cout << "\nUnknown error!\n";
+}
+
+system("pause");
+return 0;
+}
