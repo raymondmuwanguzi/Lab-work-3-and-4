@@ -1,0 +1,172 @@
+package lab1;
+
+import java.util.NoSuchElementException;
+import java.util.Scanner;
+
+/**
+• Laboratory work #1 - Variant 1.
+• <p>
+• The user thinks of a number between 1 and 100. The program must guess
+• this number in the minimum possible number of steps, and must also
+• detect the situation when the user is "cheating" (i.e. giving answers
+• that contradict each other, so that no single number could satisfy
+• all of them).
+• <p>
+• The program is organized in MVC (Model-View-Controller) style, as
+• requested by the assignment:
+• <ul>
+• <li><b>Model</b> - the current search range [low, high], the current
+• guess, the step counter and the "cheating detected" flag.</li>
+• <li><b>View</b> - all methods that print information to the console.</li>
+• <li><b>Controller</b> - reads and validates user input and drives the
+• guessing algorithm (binary search).</li>
+• </ul>
+• @author Raymond
+• @version 1.0
+*/
+public class GuessNumber {
+
+// ===================== MODEL =====================
+
+/** Lower bound of the range that may still contain the hidden number. */
+static int low;
+
+/** Upper bound of the range that may still contain the hidden number. */
+static int high;
+
+/** The number the program is currently guessing. */
+static int guess;
+
+/** Number of guesses made so far. */
+static int step;
+
+/** Becomes true as soon as the user's answers contradict each other. */
+static boolean cheatDetected;
+
+/**
+* Initializes the model: the full range 1..100, step counter at zero
+* and no cheating detected yet.
+*/
+static void model() {
+low = 1;
+high = 100;
+step = 0;
+cheatDetected = false;
+}
+
+// ===================== VIEW =====================
+
+/**
+* Prints a plain message to the console.
+*
+* @param message text to display
+*/
+static void view(String message) {
+System.out.println(message);
+}
+
+/**
+* Prints the current guess together with the instructions on how to
+* answer it.
+*
+* @param currentGuess the number currently being guessed
+*/
+static void viewGuess(int currentGuess) {
+System.out.println();
+System.out.println("Step " + step + " (searching in [" + low + ".." + high + "]).");
+System.out.println("Is your number " + currentGuess + " ?");
+System.out.println("Enter '=' if I guessed it, '>' if your number is greater, "
++ "'<' if your number is smaller:");
+}
+
+/**
+* Prints the final result of the game: either the guessed number and
+* the number of steps used, or a message that the user's answers were
+* contradictory.
+*/
+static void viewResult() {
+if (cheatDetected) {
+view("");
+view("Your answers contradict each other - there is no number consistent "
++ "with all of them. You were cheating!");
+} else {
+view("");
+view("Your number was " + guess + ". Guessed in " + step + " step(s).");
+}
+}
+
+// ===================== CONTROLLER =====================
+
+/** Scanner used to read the user's answers from the console. */
+static Scanner scanner = new Scanner(System.in);
+
+/**
+* Reads one answer from the console and validates it. Keeps asking
+* again until the user enters one of the three accepted characters
+* ('=', '>', '<'), so that incorrect input never crashes the program.
+*
+* @return the validated answer: '=', '>' or '<'
+*/
+static char readAnswer() {
+while (true) {
+String line = scanner.nextLine().trim();
+if (line.equals("=") || line.equals(">") || line.equals("<")) {
+return line.charAt(0);
+}
+view("Invalid input! Please enter only '=', '>' or '<'.");
+}
+}
+
+/**
+* Runs the guessing game using a binary-search strategy, which
+* guarantees the minimum possible number of steps (at most 7 for a
+* range of 100 numbers, since ceil(log2(100)) = 7).
+* <p>
+* After every answer the search range [low, high] is narrowed. If the
+* range ever becomes empty (low > high), the user's answers cannot
+* all be true for any single number, so cheating is reported.
+*/
+static void controller() {
+while (true) {
+if (low > high) {
+cheatDetected = true;
+break;
+}
+step++;
+guess = low + (high - low) / 2;
+viewGuess(guess);
+char answer = readAnswer();
+if (answer == '=') {
+break;
+} else if (answer == '>') {
+low = guess + 1;
+} else {
+high = guess - 1;
+}
+}
+viewResult();
+}
+
+/**
+* Program entry point.
+*
+* @param args command line arguments (not used)
+*/
+public static void main(String[] args) {
+view("Think of a number between 1 and 100.");
+view("I will try to guess it in the minimum number of steps, and I will "
++ "notice if your answers do not make sense together.");
+view("Answer honestly to get a correct result!");
+
+model();
+try {
+controller();
+} catch (NoSuchElementException e) {
+view("Input stream ended unexpectedly. The game was interrupted.");
+} catch (Exception e) {
+view("An unexpected error occurred: " + e.getMessage());
+} finally {
+scanner.close();
+}
+}
+}
