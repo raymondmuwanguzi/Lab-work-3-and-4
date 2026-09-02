@@ -1,0 +1,128 @@
+package model;
+
+/**
+• Represents the model of the number guessing game.
+• The model stores the current state of the binary search, including
+• the lower and upper limits, the current guess, and the number of attempts.
+• @author Raymond
+• @version 1.0
+*/
+public class GameModel {
+
+/** Minimum possible number. */
+private int low;
+
+/** Maximum possible number. */
+private int high;
+
+/** Current number guessed by the computer. */
+private int currentGuess;
+
+/** Number of attempts made by the computer. */
+private int attempts;
+
+/**
+* Creates a new game model with the default range 1 to 100.
+*/
+public GameModel() {
+low = 1;
+high = 100;
+currentGuess = 0;
+attempts = 0;
+}
+
+/**
+* Returns the lowest possible number.
+*
+* @return the current lower boundary
+*/
+public int getLow() {
+return low;
+}
+
+/**
+* Sets the lowest possible number.
+*
+* @param low the new lower boundary
+*/
+public void setLow(int low) {
+this.low = low;
+}
+
+/**
+* Returns the highest possible number.
+*
+* @return the current upper boundary
+*/
+public int getHigh() {
+return high;
+}
+
+/**
+* Sets the highest possible number.
+*
+* @param high the new upper boundary
+*/
+public void setHigh(int high) {
+this.high = high;
+}
+
+/**
+* Returns the current computer guess.
+*
+* @return the current guess
+*/
+public int getCurrentGuess() {
+return currentGuess;
+}
+
+/**
+* Sets the current computer guess.
+*
+* @param currentGuess the new guess
+*/
+public void setCurrentGuess(int currentGuess) {
+this.currentGuess = currentGuess;
+}
+
+/**
+* Returns the number of attempts.
+*
+* @return the number of attempts
+*/
+public int getAttempts() {
+return attempts;
+}
+
+/**
+* Increases the number of attempts by one.
+*/
+public void incrementAttempts() {
+attempts++;
+}
+
+/**
+* Checks whether the current search range is valid.
+*
+* A valid range has the lower boundary less than or equal
+* to the upper boundary.
+*
+* @return true if the range is valid, otherwise false
+*/
+public boolean isRangeValid() {
+return low <= high;
+}
+
+/**
+* Calculates the next binary search guess.
+*
+* The formula avoids integer overflow by calculating the midpoint
+* using low + (high - low) / 2.
+*
+* @return the next number to guess
+*/
+public int calculateGuess() {
+currentGuess = low + (high - low) / 2;
+return currentGuess;
+}
+}
