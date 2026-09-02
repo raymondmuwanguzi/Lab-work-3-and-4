@@ -1,0 +1,166 @@
+#include <iostream>
+#include <ctime>
+#include <cstdlib>
+#include <iomanip>
+#include <chrono>
+
+using namespace std;
+
+// Variant 2
+const int N1 = 800;
+const int N2 = 3000;
+const int N3 = 7000;
+
+const int ITERATIONS = 100;
+
+// ============================================================
+// SHELL SORT
+// ============================================================
+void shellSort(int arr[], int n) {
+for (int gap = n / 2; gap > 0; gap /= 2) {
+
+for (int i = gap; i < n; i++) {
+
+int temp = arr[i];
+int j;
+
+for (j = i;
+j >= gap && arr[j - gap] > temp;
+j -= gap) {
+
+arr[j] = arr[j - gap];
+}
+
+arr[j] = temp;
+}
+}
+}
+
+// ============================================================
+// GENERATE RANDOM ARRAY
+// ============================================================
+void generateArray(int arr[], int n) {
+for (int i = 0; i < n; i++) {
+arr[i] = rand() % 10000;
+}
+}
+
+// ============================================================
+// COPY ARRAY
+// ============================================================
+void copyArray(int source[], int dest[], int n) {
+for (int i = 0; i < n; i++) {
+dest[i] = source[i];
+}
+}
+
+// ============================================================
+// CHECK IF ARRAY IS SORTED
+// ============================================================
+bool isSorted(int arr[], int n) {
+for (int i = 0; i < n - 1; i++) {
+if (arr[i] > arr[i + 1]) {
+return false;
+}
+}
+
+return true;
+}
+
+// ============================================================
+// MEASURE SORTING TIME
+// ============================================================
+double measureTime(int original[], int n) {
+
+int* temp = new int[n];
+
+double totalTime = 0.0;
+
+for (int i = 0; i < ITERATIONS; i++) {
+
+// Copy original array
+copyArray(original, temp, n);
+
+// Start timer
+auto start = chrono::high_resolution_clock::now();
+
+// Sort
+shellSort(temp, n);
+
+// Stop timer
+auto end = chrono::high_resolution_clock::now();
+
+chrono::duration<double> duration = end - start;
+
+totalTime += duration.count();
+
+// Verify sorting
+if (!isSorted(temp, n)) {
+cout << "ERROR: Array was not sorted!" << endl;
+delete[] temp;
+return -1;
+}
+}
+
+delete[] temp;
+
+return totalTime / ITERATIONS;
+}
+
+// ============================================================
+// MAIN
+// ============================================================
+int main() {
+
+srand(static_cast<unsigned int>(time(nullptr)));
+
+int sizes[] = {N1, N2, N3};
+
+cout << "" << endl;
+cout << " TASK 3 - SHELL SORT" << endl;
+cout << " VARIANT 2" << endl;
+cout << "" << endl;
+
+cout << "Array sizes: 800, 3000, 7000" << endl;
+cout << "Iterations: " << ITERATIONS << endl;
+
+cout << endl;
+
+cout << setw(15) << "Method"
+<< setw(15) << "n = 800"
+<< setw(15) << "n = 3000"
+<< setw(15) << "n = 7000"
+<< endl;
+
+cout << "--------------------------------------------------" << endl;
+
+cout << setw(15) << "Shell Sort";
+
+for (int i = 0; i < 3; i++) {
+
+int n = sizes[i];
+
+int* original = new int[n];
+
+generateArray(original, n);
+
+double averageTime = measureTime(original, n);
+
+cout << setw(15)
+<< fixed
+<< setprecision(6)
+<< averageTime;
+
+delete[] original;
+}
+
+cout << endl;
+
+cout << "==================================================" << endl;
+
+cout << "Complexity: O(0.3n(log2 n)^2)" << endl;
+
+cout << "==================================================" << endl;
+
+return 0;
+}
