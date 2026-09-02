@@ -1,0 +1,607 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <numeric>
+#include <random>
+#include <chrono>
+#include <iomanip>
+#include <string>
+
+using namespace std;
+
+struct Part
+{
+int id;
+int TA;
+int TB;
+int TC;
+
+int total() const
+{
+return TA + TB + TC;
+}
+};
+
+// ------------------------------------------------------------
+// Calculate makespan for a given permutation
+// ------------------------------------------------------------
+int calculateMakespan(const vector<int>& order,
+const vector<Part>& parts)
+{
+int machineA = 0;
+int machineB = 0;
+int machineC = 0;
+
+for (int index : order)
+{
+const Part& p = parts[index];
+
+// Machine A
+machineA += p.TA;
+
+// Machine B
+machineB = max(machineA, machineB) + p.TB;
+
+// Machine C
+machineC = max(machineB, machineC) + p.TC;
+}
+
+return machineC;
+}
+
+// ------------------------------------------------------------
+// Print input data
+// ------------------------------------------------------------
+void printInputTable(const vector<Part>& parts)
+{
+cout << "\nInput Data:\n";
+
+cout << left
+<< setw(8) << "Part"
+<< setw(8) << "TA"
+<< setw(8) << "TB"
+<< setw(8) << "TC"
+<< setw(10) << "Total"
+<< "\n";
+
+cout << string(42, '-') << "\n";
+
+for (const Part& p : parts)
+{
+cout << left
+<< setw(8) << p.id
+<< setw(8) << p.TA
+<< setw(8) << p.TB
+<< setw(8) << p.TC
+<< setw(10) << p.total()
+<< "\n";
+}
+}
+
+// ------------------------------------------------------------
+// Greedy heuristic:
+// sort parts by descending total processing time
+// ------------------------------------------------------------
+vector<int> greedyByTotal(const vector<Part>& parts)
+{
+vector<int> order(parts.size());
+
+iota(order.begin(), order.end(), 0);
+
+sort(order.begin(), order.end(),
+[&](int a, int b)
+{
+return parts[a].total() > parts[b].total();
+});
+
+return order;
+}
+
+// ------------------------------------------------------------
+// NEH heuristic
+//
+// 1. Sort by descending total processing time
+// 2. Start with first part
+// 3. Insert each remaining part in the best position
+// ------------------------------------------------------------
+vector<int> NEH(const vector<Part>& parts,
+long long& candidatesEvaluated)
+{
+candidatesEvaluated = 0;
+
+vector<int> sortedParts(parts.size());
+
+iota(sortedParts.begin(), sortedParts.end(), 0);
+
+// Step 1: descending total processing time
+sort(sortedParts.begin(), sortedParts.end(),
+[&](int a, int b)
+{
+return parts[a].total() > parts[b].total();
+});
+
+vector<int> currentSequence;
+
+// First part
+currentSequence.push_back(sortedParts[0]);
+
+// Insert remaining parts
+for (size_t i = 1; i < sortedParts.size(); ++i)
+{
+int currentPart = sortedParts[i];
+
+vector<int> bestSequence;
+int bestMakespan = INT_MAX;
+
+// Try every possible insertion position
+for (size_t position = 0;
+position <= currentSequence.size();
+++position)
+{
+vector<int> candidate = currentSequence;
+
+candidate.insert(candidate.begin() + position,
+currentPart);
+
+int makespan =
+calculateMakespan(candidate, parts);
+
+candidatesEvaluated++;
+
+if (makespan < bestMakespan)
+{
+bestMakespan = makespan;
+bestSequence = candidate;
+}
+}
+
+currentSequence = bestSequence;
+}
+
+return currentSequence;
+}
+
+// ------------------------------------------------------------
+// Print sequence
+// ------------------------------------------------------------
+void printOrder(const vector<int>& order,
+const vector<Part>& parts)
+{
+cout << "Order: ";
+
+for (size_t i = 0; i < order.size(); ++i)
+{
+cout << "J" << parts[order[i]].id;
+
+if (i + 1 < order.size())
+cout << " -> ";
+}
+
+cout << "\n";
+}
+
+// ------------------------------------------------------------
+// Print detailed schedule
+// ------------------------------------------------------------
+void printSchedule(const vector<int>& order,
+const vector<Part>& parts)
+{
+int A = 0;
+int B = 0;
+int C = 0;
+
+cout << "\nDetailed Schedule:\n\n";
+
+cout << left
+<< setw(8) << "Part"
+<< setw(18) << "Machine A"
+<< setw(18) << "Machine B"
+<< setw(18) << "Machine C"
+<< "\n";
+
+cout << string(62, '-') << "\n";
+
+for (int index : order)
+{
+const Part& p = parts[index];
+
+// Machine A
+int startA = A;
+int finishA = startA + p.TA;
+A = finishA;
+
+// Machine B
+int startB = max(finishA, B);
+int finishB = startB + p.TB;
+B = finishB;
+
+// Machine C
+int startC = max(finishB, C);
+int finishC = startC + p.TC;
+C = finishC;
+
+cout << left
+<< setw(8) << ("J" + to_string(p.id))
+<< setw(18) << (to_string(startA) +
+"-" + to_string(finishA))
+<< setw(18) << (to_string(startB) +
+"-" + to_string(finishB))
+<< setw(18) << (to_string(startC) +
+"-" + to_string(finishC))
+<< "\n";
+}
+}
+
+// ------------------------------------------------------------
+// Simple text Gantt chart
+// ------------------------------------------------------------
+void printGanttChart(const vector<int>& order,
+const vector<Part>& parts)
+{
+cout << "\nGantt Chart:\n\n";
+
+int A = 0;
+int B = 0;
+int C = 0;
+
+cout << "Machine A: ";
+
+for (int index : order)
+{
+const Part& p = parts[index];
+
+int start = A;
+int finish = start + p.TA;
+
+cout << "[J" << p.id << ": "
+<< start << "-" << finish << "] ";
+
+A = finish;
+}
+
+cout << "\n";
+
+cout << "Machine B: ";
+
+for (int index : order)
+{
+const Part& p = parts[index];
+
+int startA = 0;
+int previousA = 0;
+
+// Calculate completion on A for this part
+for (int j : order)
+{
+previousA += parts[j].TA;
+
+if (j == index)
+break;
+}
+
+startA = previousA;
+
+int start = max(startA, B);
+int finish = start + p.TB;
+
+cout << "[J" << p.id << ": "
+<< start << "-" << finish << "] ";
+
+B = finish;
+}
+
+cout << "\n";
+
+cout << "Machine C: ";
+
+A = 0;
+B = 0;
+C = 0;
+
+for (int index : order)
+{
+const Part& p = parts[index];
+
+A += p.TA;
+
+B = max(A, B) + p.TB;
+
+int start = max(B, C);
+int finish = start + p.TC;
+
+cout << "[J" << p.id << ": "
+<< start << "-" << finish << "] ";
+
+C = finish;
+}
+
+cout << "\n";
+}
+
+// ------------------------------------------------------------
+// Generate random parts
+// ------------------------------------------------------------
+vector<Part> generateRandomParts(int n,
+int minTime,
+int maxTime,
+mt19937& generator)
+{
+uniform_int_distribution<int> distribution(
+minTime, maxTime);
+
+vector<Part> parts;
+
+for (int i = 0; i < n; ++i)
+{
+Part p;
+
+p.id = i + 1;
+p.TA = distribution(generator);
+p.TB = distribution(generator);
+p.TC = distribution(generator);
+
+parts.push_back(p);
+}
+
+return parts;
+}
+
+// ------------------------------------------------------------
+// Run one test case
+// ------------------------------------------------------------
+void runTest(const vector<Part>& parts,
+bool showDetails = true)
+{
+if (parts.empty())
+return;
+
+cout << "\n============================================\n";
+cout << "N = " << parts.size() << "\n";
+cout << "============================================\n";
+
+if (showDetails)
+printInputTable(parts);
+
+// --------------------------------------------------------
+// GREEDY
+// --------------------------------------------------------
+
+auto startGreedy = chrono::high_resolution_clock::now();
+
+vector<int> greedyOrder =
+greedyByTotal(parts);
+
+int greedyMakespan =
+calculateMakespan(greedyOrder, parts);
+
+auto endGreedy = chrono::high_resolution_clock::now();
+
+double greedyTime =
+chrono::duration<double>(endGreedy -
+startGreedy).count();
+
+// --------------------------------------------------------
+// NEH
+// --------------------------------------------------------
+
+long long candidates = 0;
+
+auto startNEH = chrono::high_resolution_clock::now();
+
+vector<int> nehOrder =
+NEH(parts, candidates);
+
+int nehMakespan =
+calculateMakespan(nehOrder, parts);
+
+auto endNEH = chrono::high_resolution_clock::now();
+
+double nehTime =
+chrono::duration<double>(endNEH -
+startNEH).count();
+
+// --------------------------------------------------------
+// Results
+// --------------------------------------------------------
+
+cout << "\nResults:\n";
+
+cout << left
+<< setw(25) << "Heuristic"
+<< setw(15) << "Makespan"
+<< setw(15) << "Time (sec)"
+<< "\n";
+
+cout << string(55, '-') << "\n";
+
+cout << left
+<< setw(25) << "Greedy by Total"
+<< setw(15) << greedyMakespan
+<< setw(15) << fixed << setprecision(8)
+<< greedyTime
+<< "\n";
+
+cout << left
+<< setw(25) << "NEH"
+<< setw(15) << nehMakespan
+<< setw(15) << fixed << setprecision(8)
+<< nehTime
+<< "\n";
+
+cout << "\nGreedy Order:\n";
+printOrder(greedyOrder, parts);
+
+cout << "\nNEH Order:\n";
+printOrder(nehOrder, parts);
+
+double improvement = 0.0;
+
+if (greedyMakespan != 0)
+{
+improvement =
+100.0 *
+(greedyMakespan - nehMakespan) /
+greedyMakespan;
+}
+
+cout << "\nNEH improvement over Greedy: "
+<< fixed << setprecision(2)
+<< improvement << "%\n";
+
+cout << "NEH candidates evaluated: "
+<< candidates << "\n";
+
+if (showDetails)
+{
+cout << "\nNEH Makespan: "
+<< nehMakespan << "\n";
+
+printSchedule(nehOrder, parts);
+
+printGanttChart(nehOrder, parts);
+}
+}
+
+// ------------------------------------------------------------
+// Main
+// ------------------------------------------------------------
+int main()
+{
+cout << "\n";
+cout << " THREE-MACHINE FLOW SHOP SCHEDULING\n";
+cout << " NEH HEURISTIC\n";
+cout << "\n";
+
+// --------------------------------------------------------
+// TEST CASE 1
+// Given data
+// --------------------------------------------------------
+
+vector<Part> test1 =
+{
+{1, 45, 32, 28},
+{2, 23, 56, 41},
+{3, 67, 12, 34},
+{4, 18, 43, 52},
+{5, 31, 27, 39}
+};
+
+cout << "\n\nTEST CASE 1 - SMALL INSTANCE\n";
+
+runTest(test1, true);
+
+// --------------------------------------------------------
+// Random generator
+// --------------------------------------------------------
+
+random_device rd;
+mt19937 generator(rd());
+
+// --------------------------------------------------------
+// TEST CASE 2
+// N = 10
+// Processing times: 10-100
+// --------------------------------------------------------
+
+vector<Part> test2 =
+generateRandomParts(10, 10, 100, generator);
+
+cout << "\n\nTEST CASE 2 - MEDIUM INSTANCE\n";
+
+runTest(test2, true);
+
+// --------------------------------------------------------
+// TEST CASE 3
+// N = 20
+// Processing times: 1-50
+// --------------------------------------------------------
+
+vector<Part> test3 =
+generateRandomParts(20, 1, 50, generator);
+
+cout << "\n\nTEST CASE 3 - LARGE INSTANCE\n";
+
+runTest(test3, true);
+
+// --------------------------------------------------------
+// Additional statistical testing
+// --------------------------------------------------------
+
+cout << "\n\n============================================\n";
+cout << " STATISTICAL TESTING\n";
+cout << "============================================\n";
+
+vector<int> sizes = {5, 10, 20, 50, 100, 200};
+
+const int numberOfTests = 20;
+
+cout << left
+<< setw(8) << "N"
+<< setw(18) << "Avg Makespan"
+<< setw(18) << "Avg Time(sec)"
+<< setw(20) << "Avg Candidates"
+<< "\n";
+
+cout << string(64, '-') << "\n";
+
+for (int n : sizes)
+{
+long long totalMakespan = 0;
+double totalTime = 0.0;
+long long totalCandidates = 0;
+
+for (int test = 0;
+test < numberOfTests;
+++test)
+{
+vector<Part> parts =
+generateRandomParts(
+n, 1, 100, generator);
+
+long long candidates = 0;
+
+auto start =
+chrono::high_resolution_clock::now();
+
+vector<int> order =
+NEH(parts, candidates);
+
+int makespan =
+calculateMakespan(order, parts);
+
+auto finish =
+chrono::high_resolution_clock::now();
+
+double time =
+chrono::duration<double>(
+finish - start).count();
+
+totalMakespan += makespan;
+totalTime += time;
+totalCandidates += candidates;
+}
+
+double averageMakespan =
+static_cast<double>(totalMakespan) /
+numberOfTests;
+
+double averageTime =
+totalTime / numberOfTests;
+
+double averageCandidates =
+static_cast<double>(totalCandidates) /
+numberOfTests;
+
+cout << left
+<< setw(8) << n
+<< setw(18) << fixed << setprecision(2)
+<< averageMakespan
+<< setw(18) << averageTime
+<< setw(20) << averageCandidates
+<< "\n";
+}
+
+cout << "\nProgram finished successfully.\n";
+
+return 0;
+}
