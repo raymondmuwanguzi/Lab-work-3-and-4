@@ -1,0 +1,339 @@
+#include <iostream>
+#include <ctime>
+#include <cstdlib>
+#include <iomanip>
+#include <chrono>
+#include <string>
+
+using namespace std;
+
+// ============================================================
+// Constants for Variant 2
+// ============================================================
+const int N1 = 800;
+const int N2 = 3000;
+const int N3 = 7000;
+
+const int ITERATIONS = 100;
+
+// ============================================================
+// SHELL SORT
+// ============================================================
+void shellSort(int arr[], int n) {
+// Start with a large gap, then reduce the gap
+for (int gap = n / 2; gap > 0; gap /= 2) {
+
+// Gapped insertion sort
+for (int i = gap; i < n; i++) {
+
+int temp = arr[i];
+int j;
+
+for (j = i;
+j >= gap && arr[j - gap] > temp;
+j -= gap) {
+
+arr[j] = arr[j - gap];
+}
+
+arr[j] = temp;
+}
+}
+}
+
+// ============================================================
+// SIMPLE INSERTION SORT
+// ============================================================
+void insertionSort(int arr[], int n) {
+
+for (int i = 1; i < n; i++) {
+
+int key = arr[i];
+int j = i - 1;
+
+while (j >= 0 && arr[j] > key) {
+
+arr[j + 1] = arr[j];
+j--;
+}
+
+arr[j + 1] = key;
+}
+}
+
+// ============================================================
+// GENERATE RANDOM ARRAY
+// ============================================================
+void generateArray(int arr[], int n) {
+
+for (int i = 0; i < n; i++) {
+arr[i] = rand() % 10000;
+}
+}
+
+// ============================================================
+// COPY ARRAY
+// ============================================================
+void copyArray(int source[], int dest[], int n) {
+
+for (int i = 0; i < n; i++) {
+dest[i] = source[i];
+}
+}
+
+// ============================================================
+// CHECK WHETHER ARRAY IS SORTED
+// ============================================================
+bool isSorted(int arr[], int n) {
+
+for (int i = 0; i < n - 1; i++) {
+
+if (arr[i] > arr[i + 1]) {
+return false;
+}
+}
+
+return true;
+}
+
+// ============================================================
+// MEASURE SORTING TIME
+// ============================================================
+double measureTime(
+void (*sortFunc)(int[], int),
+int original[],
+int n,
+int iterations
+) {
+
+int* temp = new int[n];
+
+double totalTime = 0.0;
+
+for (int iter = 0; iter < iterations; iter++) {
+
+// Copy the original unsorted array
+copyArray(original, temp, n);
+
+// Start timer
+auto start = chrono::high_resolution_clock::now();
+
+// Sort
+sortFunc(temp, n);
+
+// Stop timer
+auto end = chrono::high_resolution_clock::now();
+
+chrono::duration<double> duration = end - start;
+
+totalTime += duration.count();
+
+// Verify sorting
+if (!isSorted(temp, n)) {
+
+cout << "ERROR: Array was not sorted correctly!"
+<< endl;
+
+delete[] temp;
+
+return -1.0;
+}
+}
+
+delete[] temp;
+
+// Return average time
+return totalTime / iterations;
+}
+
+// ============================================================
+// TEST ONE SORTING METHOD
+// ============================================================
+void testMethod(
+const string& methodName,
+void (*sortFunc)(int[], int),
+int sizes[],
+int numberOfSizes
+) {
+
+cout << setw(20) << left << methodName;
+
+for (int i = 0; i < numberOfSizes; i++) {
+
+int n = sizes[i];
+
+// Create original random array
+int* original = new int[n];
+
+generateArray(original, n);
+
+// Measure average sorting time
+double averageTime =
+measureTime(
+sortFunc,
+original,
+n,
+ITERATIONS
+);
+
+cout << setw(18)
+<< fixed
+<< setprecision(6)
+<< averageTime;
+
+delete[] original;
+}
+
+cout << endl;
+}
+
+// ============================================================
+// MAIN
+// ============================================================
+int main() {
+
+// Seed random number generator
+srand(static_cast<unsigned int>(time(nullptr)));
+
+// Variant 2 array sizes
+int sizes[] = {N1, N2, N3};
+
+int numberOfSizes = 3;
+
+// ========================================================
+// PROGRAM HEADER
+// ========================================================
+
+cout << "============================================================"
+<< endl;
+
+cout << " LAB 1 PART 1 - VARIANT 2"
+<< endl;
+
+cout << " Sorting Methods: Shell Sort and Insertion Sort"
+<< endl;
+
+cout << " Array sizes: 800, 3000, 7000"
+<< endl;
+
+cout << " Iterations per test: "
+<< ITERATIONS
+<< endl;
+
+cout << "============================================================"
+<< endl << endl;
+
+// ========================================================
+// RESULTS TABLE
+// ========================================================
+
+cout << setw(20) << left << "Method"
+<< setw(18) << "n = 800"
+<< setw(18) << "n = 3000"
+<< setw(18) << "n = 7000"
+<< endl;
+
+cout << "------------------------------------------------------------"
+<< endl;
+
+// Test Shell Sort
+testMethod(
+"Shell Sort",
+shellSort,
+sizes,
+numberOfSizes
+);
+
+// Test Insertion Sort
+testMethod(
+"Insertion Sort",
+insertionSort,
+sizes,
+numberOfSizes
+);
+
+// ========================================================
+// COMPLEXITY ANALYSIS
+// ========================================================
+
+cout << endl;
+
+cout << "============================================================"
+<< endl;
+
+cout << " COMPLEXITY ANALYSIS"
+<< endl;
+
+cout << "============================================================"
+<< endl;
+
+cout << endl;
+
+cout << "Shell Sort:"
+<< endl;
+
+cout << "Required complexity model:"
+<< endl;
+
+cout << "O(0.3n(log2 n)^2)"
+<< endl;
+
+cout << endl;
+
+cout << "Simple Insertion Sort:"
+<< endl;
+
+cout << "Worst-case complexity:"
+<< endl;
+
+cout << "O(n^2)"
+<< endl;
+
+cout << endl;
+
+cout << "Expected result:"
+<< endl;
+
+cout << "Shell Sort should be considerably faster than"
+<< endl;
+
+cout << "Insertion Sort as the array size increases."
+<< endl;
+
+cout << endl;
+
+cout << "============================================================"
+<< endl;
+
+cout << " CONCLUSION"
+<< endl;
+
+cout << "============================================================"
+<< endl;
+
+cout << "For small arrays, both algorithms can perform quickly."
+<< endl;
+
+cout << "As n increases, Insertion Sort requires significantly"
+<< endl;
+
+cout << "more operations because of its quadratic complexity."
+<< endl;
+
+cout << "Shell Sort reduces the number of element movements by"
+<< endl;
+
+cout << "initially comparing elements that are far apart."
+<< endl;
+
+cout << "Therefore, Shell Sort is expected to perform better"
+<< endl;
+
+cout << "for the larger test sizes of 3000 and 7000 elements."
+<< endl;
+
+cout << "============================================================"
+<< endl;
+
+return 0;
+}
