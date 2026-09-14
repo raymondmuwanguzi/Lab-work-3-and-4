@@ -1,0 +1,69 @@
+package lab1;
+
+/**
+• VIEW.
+• <p>
+• Responsible only for displaying information on the console. It has
+• no knowledge of the game logic - it just prints whatever data it
+• is given by the Controller.
+• @author Raymond
+• @version 1.0
+*/
+public class GuessView {
+
+/** Prints the welcome message and instructions at the start of the game. */
+public void showWelcome() {
+System.out.println("Think of a number between 1 and 100.");
+System.out.println("I will try to guess it in the minimum number of steps, and I will "
++ "notice if your answers do not make sense together.");
+System.out.println("Answer honestly to get a correct result!");
+}
+
+/**
+* Prints the current guess together with the current search range and
+* the instructions on how to answer it.
+*
+* @param step current step number
+* @param low lower bound of the current search range
+* @param high upper bound of the current search range
+* @param guess the number currently being guessed
+*/
+public void showGuess(int step, int low, int high, int guess) {
+System.out.println();
+System.out.println("Step " + step + " (searching in [" + low + ".." + high + "]).");
+System.out.println("Is your number " + guess + " ?");
+System.out.println("Enter '=' if I guessed it, '>' if your number is greater, "
++ "'<' if your number is smaller:");
+}
+
+/** Prints a message informing the user that the input was not recognized. */
+public void showInvalidInput() {
+System.out.println("Invalid input! Please enter only '=', '>' or '<'.");
+}
+
+/**
+* Prints the final result of the game.
+*
+* @param cheatDetected whether the user's answers were contradictory
+* @param guess the last guessed number
+* @param step the number of steps used
+*/
+public void showResult(boolean cheatDetected, int guess, int step) {
+System.out.println();
+if (cheatDetected) {
+System.out.println("Your answers contradict each other - there is no number "
++ "consistent with all of them. You were cheating!");
+} else {
+System.out.println("Your number was " + guess + ". Guessed in " + step + " step(s).");
+}
+}
+
+/**
+* Prints an error message, used when an unexpected exception occurs.
+*
+* @param message the message to display
+*/
+public void showError(String message) {
+System.out.println(message);
+}
+}

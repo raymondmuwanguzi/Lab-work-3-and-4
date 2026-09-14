@@ -1,0 +1,25 @@
+package lab1;
+
+/**
+• Laboratory work #1 - Variant 1.
+• <p>
+• Entry point of the program. Its only job is to create the Model,
+• the View and the Controller, and start the game - it contains no
+• game logic itself.
+• @author Raymond
+• @version 1.0
+*/
+public class GuessNumber {
+
+/**
+* Program entry point.
+*
+* @param args command line arguments (not used)
+*/
+public static void main(String[] args) {
+GuessModel model = new GuessModel();
+GuessView view = new GuessView();
+GuessController controller = new GuessController(model, view);
+controller.run();
+}
+}

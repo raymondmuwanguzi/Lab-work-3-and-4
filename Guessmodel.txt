@@ -1,0 +1,101 @@
+package lab1;
+
+/**
+• MODEL.
+• <p>
+• Holds the entire state of the guessing game: the search range
+• [low, high], the current guess, the number of steps taken, and
+• whether the user's answers have been found to contradict each
+• other ("cheating"). The Model knows nothing about console input
+• or output - it only stores data and applies the rules of the
+• binary-search guessing algorithm.
+• @author Raymond
+• @version 1.0
+*/
+public class GuessModel {
+
+private int low;
+private int high;
+private int guess;
+private int step;
+private boolean cheatDetected;
+
+/** Creates the model and initializes it with the default range 1..100. */
+public GuessModel() {
+reset();
+}
+
+/** Resets the model to the initial state of a new game. */
+public void reset() {
+low = 1;
+high = 100;
+step = 0;
+guess = 0;
+cheatDetected = false;
+}
+
+/**
+* @return {@code true} if the search range is empty, which means the
+* user's answers cannot all be true for any single number
+*/
+public boolean isRangeEmpty() {
+return low > high;
+}
+
+/**
+* Computes the next guess as the midpoint of the current range and
+* increases the step counter. Using the midpoint guarantees the
+* minimum possible number of steps (binary search).
+*
+* @return the newly computed guess
+*/
+public int nextGuess() {
+step++;
+guess = low + (high - low) / 2;
+return guess;
+}
+
+/**
+* Updates the search range according to the user's answer for the
+* current guess.
+*
+* @param answer '=' if guessed correctly, '>' if the hidden number
+* is greater than the guess, '<' if it is smaller
+* @return {@code true} if the number has been guessed (answer was '=')
+*/
+public boolean applyAnswer(char answer) {
+if (answer == '=') {
+return true;
+} else if (answer == '>') {
+low = guess + 1;
+} else if (answer == '<') {
+high = guess - 1;
+}
+return false;
+}
+
+/** Marks that the user's answers were found to be contradictory. */
+public void markCheat() {
+cheatDetected = true;
+}
+
+public int getLow() {
+return low;
+}
+
+public int getHigh() {
+return high;
+}
+
+public int getGuess() {
+return guess;
+}
+
+public int getStep() {
+return step;
+}
+
+public boolean isCheatDetected() {
+return cheatDetected;
+}
+}

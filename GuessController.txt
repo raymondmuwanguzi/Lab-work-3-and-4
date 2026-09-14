@@ -1,0 +1,84 @@
+package lab1;
+
+import java.util.NoSuchElementException;
+import java.util.Scanner;
+
+/**
+• CONTROLLER.
+• <p>
+• Reads and validates the user's input, drives the binary-search
+• guessing algorithm by updating the Model, and asks the View to
+• display the results. This is the class that connects the Model
+• and the View together.
+• @author Raymond
+• @version 1.0
+*/
+public class GuessController {
+
+private final GuessModel model;
+private final GuessView view;
+private final Scanner scanner;
+
+/**
+* Creates a controller bound to the given model and view.
+*
+* @param model the game state to update
+* @param view the view used to display information
+*/
+public GuessController(GuessModel model, GuessView view) {
+this.model = model;
+this.view = view;
+this.scanner = new Scanner(System.in);
+}
+
+/**
+* Reads one answer from the console and validates it. Keeps asking
+* again until the user enters one of the three accepted characters
+* ('=', '>', '<'), so incorrect input never crashes the program.
+*
+* @return the validated answer: '=', '>' or '<'
+*/
+private char readAnswer() {
+while (true) {
+String line = scanner.nextLine().trim();
+if (line.equals("=") || line.equals(">") || line.equals("<")) {
+return line.charAt(0);
+}
+view.showInvalidInput();
+}
+}
+
+/**
+* Runs the guessing game from start to finish: shows the welcome
+* message, repeatedly guesses the midpoint of the current range and
+* reacts to the user's answer, then shows the final result.
+* <p>
+* If the search range ever becomes empty, the user's answers cannot
+* all be true for any single number, so the game ends with a
+* "cheating detected" result instead of a guessed number.
+*/
+public void run() {
+view.showWelcome();
+try {
+while (true) {
+if (model.isRangeEmpty()) {
+model.markCheat();
+break;
+}
+int guess = model.nextGuess();
+view.showGuess(model.getStep(), model.getLow(), model.getHigh(), guess);
+char answer = readAnswer();
+if (model.applyAnswer(answer)) {
+break;
+}
+}
+view.showResult(model.isCheatDetected(), model.getGuess(), model.getStep());
+} catch (NoSuchElementException e) {
+view.showError("Input stream ended unexpectedly. The game was interrupted.");
+} catch (Exception e) {
+view.showError("An unexpected error occurred: " + e.getMessage());
+} finally {
+scanner.close();
+}
+}
+}
