@@ -1,0 +1,285 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <random>
+#include <chrono>
+#include <iomanip>
+using namespace std;
+
+mt19937 rng(random_device{}());
+
+int length(const vector<int>& c, const vector<vector<int>>& d) {
+int s = 0, n = c.size();
+for (int i = 0; i < n - 1; i++)
+s += d[c[i]][c[i + 1]];
+return s + d[c[n - 1]][c[0]];
+}
+
+pair<vector<int>, int> bruteForce(const vector<vector<int>>& d) {
+int n = d.size(), best = -1;
+vector<int> p, bestC;
+
+for (int i = 1; i < n; i++) p.push_back(i);
+
+do {
+vector<int> c = {0};
+c.insert(c.end(), p.begin(), p.end());
+
+// Avoid checking the reverse of the same cycle.
+if (c[1] > c[n - 1]) continue;
+
+int x = length(c, d);
+if (x > best) {
+best = x;
+bestC = c;
+}
+} while (next_permutation(p.begin(), p.end()));
+
+return {bestC, best};
+}
+
+pair<vector<int>, int> greedy(const vector<vector<int>>& d, int start) {
+int n = d.size(), cur = start;
+vector<bool> used(n, false);
+vector<int> c = {start};
+used[start] = true;
+
+for (int k = 1; k < n; k++) {
+int nxt = -1, mx = -1;
+
+for (int j = 0; j < n; j++)
+if (!used[j] && d[cur][j] > mx) {
+mx = d[cur][j];
+nxt = j;
+}
+
+c.push_back(nxt);
+used[nxt] = true;
+cur = nxt;
+}
+
+return {c, length(c, d)};
+}
+
+struct Result {
+vector<int> cycle;
+int best, worst;
+double avg;
+};
+
+Result randomRestart(const vector<vector<int>>& d, int k = 5) {
+Result r;
+r.best = -1;
+r.worst = 1e9;
+r.avg = 0;
+
+uniform_int_distribution<int> rnd(0, d.size() - 1);
+
+for (int i = 0; i < k; i++) {
+auto x = greedy(d, rnd(rng));
+r.avg += x.second;
+
+if (x.second > r.best) {
+r.best = x.second;
+r.cycle = x.first;
+}
+
+r.worst = min(r.worst, x.second);
+}
+
+r.avg /= k;
+return r;
+}
+
+vector<vector<int>> randomGraph(int n) {
+vector<vector<int>> d(n, vector<int>(n, 0));
+uniform_int_distribution<int> w(0, 99);
+
+for (int i = 0; i < n; i++)
+for (int j = i + 1; j < n; j++)
+d[i][j] = d[j][i] = w(rng);
+
+return d;
+}
+
+void printCycle(const vector<int>& c) {
+for (int x : c) cout << x + 1 << " -> ";
+cout << c[0] + 1;
+}
+
+void printMatrix(const vector<vector<int>>& d) {
+int n = d.size();
+
+cout << " ";
+for (int i = 1; i <= n; i++)
+cout << setw(4) << i;
+cout << '\n';
+
+for (int i = 0; i < n; i++) {
+cout << setw(4) << i + 1;
+for (int j = 0; j < n; j++)
+cout << setw(4) << (i == j ? 0 : d[i][j]);
+cout << '\n';
+}
+}
+
+void smallExperiment() {
+cout << "\nSMALL N EXPERIMENT\n";
+cout << "N H-Time H-Length B-Time B-Length Match Quality\n";
+
+for (int n = 6; n <= 13; n++) {
+double ht = 0, bt = 0, q = 0;
+int match = 0;
+double hl = 0, bl = 0;
+
+for (int test = 0; test < 100; test++) {
+auto d = randomGraph(n);
+
+auto t1 = chrono::high_resolution_clock::now();
+auto b = bruteForce(d);
+auto t2 = chrono::high_resolution_clock::now();
+
+auto h = randomRestart(d, 5);
+auto t3 = chrono::high_resolution_clock::now();
+
+double btime =
+chrono::duration<double>(t2 - t1).count();
+double htime =
+chrono::duration<double>(t3 - t2).count();
+
+bt += btime;
+ht += htime;
+bl += b.second;
+hl += h.best;
+q += (double)b.second / h.best;
+
+if (b.second == h.best)
+match++;
+}
+
+cout << fixed << setprecision(4)
+<< n << " "
+<< ht / 100 << " "
+<< hl / 100 << " "
+<< bt / 100 << " "
+<< bl / 100 << " "
+<< match << "% "
+<< q / 100 << '\n';
+}
+}
+
+void scalingExperiment() {
+cout << "\nHEURISTIC SCALING\n";
+cout << "N Average Time Average Length\n";
+
+for (int n = 10; n <= 150; n += 10) {
+double time = 0, len = 0;
+
+for (int test = 0; test < 10; test++) {
+auto d = randomGraph(n);
+
+auto t1 = chrono::high_resolution_clock::now();
+auto r = randomRestart(d, 5);
+auto t2 = chrono::high_resolution_clock::now();
+
+time += chrono::duration<double>(t2 - t1).count();
+len += r.best;
+}
+
+cout << fixed << setprecision(6)
+<< setw(3) << n << " "
+<< time / 10 << " s "
+<< len / 10 << '\n';
+}
+}
+
+void counterexample() {
+cout << "\nSEARCHING FOR COUNTEREXAMPLE...\n";
+
+while (true) {
+auto d = randomGraph(6);
+auto b = bruteForce(d);
+auto h = randomRestart(d, 5);
+
+if (h.best < b.second) {
+cout << "\nCOUNTEREXAMPLE FOUND\n\n";
+printMatrix(d);
+
+cout << "\nBrute Force:\nCycle: ";
+printCycle(b.first);
+cout << "\nLength: " << b.second << '\n';
+
+cout << "\nHeuristic:\nCycle: ";
+printCycle(h.cycle);
+cout << "\nBest Length: " << h.best;
+cout << "\nAverage Length: " << h.avg << '\n';
+
+cout << "\nQuality = "
+<< fixed << setprecision(4)
+<< (double)b.second / h.best << '\n';
+return;
+}
+}
+}
+
+int main() {
+cout << "MAXIMUM CYCLE PROBLEM - VARIANT 1\n";
+cout << "1. Small experiment (N=6..13, 100 graphs)\n";
+cout << "2. Heuristic scaling (N=10..150)\n";
+cout << "3. Find counterexample (N=6)\n";
+cout << "4. Single random test\n";
+cout << "Choose: ";
+
+int choice;
+cin >> choice;
+
+if (choice == 1) {
+smallExperiment();
+}
+else if (choice == 2) {
+scalingExperiment();
+}
+else if (choice == 3) {
+counterexample();
+}
+else if (choice == 4) {
+int n;
+cout << "N = ";
+cin >> n;
+
+auto d = randomGraph(n);
+
+cout << "\nDistance Matrix:\n";
+printMatrix(d);
+
+auto t1 = chrono::high_resolution_clock::now();
+auto b = bruteForce(d);
+auto t2 = chrono::high_resolution_clock::now();
+
+auto h = randomRestart(d, 5);
+auto t3 = chrono::high_resolution_clock::now();
+
+double bt = chrono::duration<double>(t2 - t1).count();
+double ht = chrono::duration<double>(t3 - t2).count();
+
+cout << "\nBrute Force:\nCycle: ";
+printCycle(b.first);
+cout << "\nLength: " << b.second;
+cout << "\nTime: " << bt << " s\n";
+
+cout << "\nHeuristic (5 restarts):\nCycle: ";
+printCycle(h.cycle);
+cout << "\nBest Length: " << h.best;
+cout << "\nAverage Length: " << h.avg;
+cout << "\nTime: " << ht << " s\n";
+
+cout << "\nResult: "
+<< (b.second == h.best ? "MATCH" : "MISMATCH");
+
+cout << "\nQuality coefficient: "
+<< fixed << setprecision(4)
+<< (double)b.second / h.best << '\n';
+}
+
+return 0;
+}
