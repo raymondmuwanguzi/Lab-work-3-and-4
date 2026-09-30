@@ -1,0 +1,113 @@
+package lab2.controller;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import lab2.model.Gender;
+import lab2.model.Grade;
+import lab2.model.Parent;
+import lab2.model.SemesterModel;
+import lab2.model.Student;
+import lab2.model.Subject;
+import lab2.model.Teacher;
+import lab2.view.ConsoleView;
+
+/**
+• Controller: builds the model, runs the semester (teachers give grades week by week),
+• asks the model to settle the bonuses and tells the view what to show.
+*/
+public class SemesterController {
+
+/** Number of weeks in the semester (must be >= 10 so that 10 grades fit "one per week"). /
+public static final int WEEKS = 14;
+/* Probability that a teacher grades a particular student in a particular week. */
+public static final double GRADE_PROBABILITY = 0.8;
+
+private static final String[] SUBJECT_TITLES = {
+"Mathematics", "Physics", "Programming", "History", "English"
+};
+private static final String[] TEACHER_NAMES = {
+"Ivanov A.P.", "Smirnova E.V.", "Kuznetsov D.S.", "Popova N.A.", "Sokolov M.I."
+};
+private static final String[] STUDENT_NAMES = {
+"Alexey Volkov", "Maria Orlova", "Dmitry Belov", "Anna Kotova", "Sergey Lebedev",
+"Olga Morozova", "Pavel Zaitsev", "Elena Fedorova", "Nikita Egorov", "Irina Pavlova"
+};
+private static final String[] PARENT_NAMES = {
+"Igor Volkov", "Svetlana Orlova", "Andrey Belov", "Tatiana Kotova", "Viktor Lebedev",
+"Natalia Morozova", "Oleg Zaitsev", "Galina Fedorova", "Boris Egorov", "Lyudmila Pavlova"
+};
+
+private final SemesterModel model;
+private final ConsoleView view;
+private final Random random;
+/** Talent of every student in the demo (0..1); used only to generate plausible marks. */
+private final Map<Student, Double> talent = new HashMap<Student, Double>();
+
+public SemesterController(SemesterModel model, ConsoleView view, long seed) {
+this.model = model;
+this.view = view;
+this.random = new Random(seed);
+}
+
+/** Runs the whole demonstration. */
+public void run() {
+populateModel();
+view.showParticipants(model);
+
+view.showTitle("SEMESTER: " + model.getWeeks() + " weeks, each teacher may give a student"
++ " at most " + Student.MAX_GRADES_PER_SUBJECT + " grades, at most one per week");
+runSemester();
+
+model.settleBonuses();
+
+view.showJournal(model);
+view.showAverageTable(model);
+view.showResults(model);
+view.showTotals(model);
+}
+
+/** Creates 5 teachers (one subject each), 10 students and a parent for each of them. */
+private void populateModel() {
+for (int i = 0; i < SUBJECT_TITLES.length; i++) {
+Subject subject = new Subject(SUBJECT_TITLES[i]);
+Gender gender = i % 2 == 0 ? Gender.MALE : Gender.FEMALE;
+model.addTeacher(new Teacher(TEACHER_NAMES[i], 35 + i * 4, gender, subject));
+}
+for (int i = 0; i < STUDENT_NAMES.length; i++) {
+Gender gender = i % 2 == 0 ? Gender.MALE : Gender.FEMALE;
+Student student = new Student(STUDENT_NAMES[i], 18 + i % 3, gender);
+Parent parent = new Parent(PARENT_NAMES[i], 42 + i, i % 2 == 0 ? Gender.MALE : Gender.FEMALE);
+parent.addChild(student);
+model.addStudent(student);
+model.addParent(parent);
+// talent is spread from weak to strong students
+talent.put(student, (double) i / (STUDENT_NAMES.length - 1));
+}
+}
+
+/** Week by week every teacher may grade every student (respecting the limits of the task). */
+private void runSemester() {
+for (int week = 1; week <= model.getWeeks(); week++) {
+List<Grade> issued = new ArrayList<Grade>();
+for (Teacher teacher : model.getTeachers()) {
+for (Student student : model.getStudents()) {
+if (teacher.canGrade(student, week) && random.nextDouble() < GRADE_PROBABILITY) {
+issued.add(teacher.grade(student, week, generateMark(student)));
+}
+}
+}
+view.showWeek(week, issued);
+}
+}
+
+/** Generates a mark 2..5 that depends on the talent of the student. */
+private int generateMark(Student student) {
+double expected = 3.2 + 2.0 * talent.get(student);
+long mark = Math.round(expected + random.nextGaussian() * 0.6);
+return (int) Math.max(Grade.MIN_VALUE, Math.min(Grade.MAX_VALUE, mark));
+}
+}

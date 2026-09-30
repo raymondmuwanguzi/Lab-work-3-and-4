@@ -1,0 +1,49 @@
+package lab2.model;
+
+/**
+• Status ("mood") of a parent and the size of the bonus (in thousands) paid to the student.
+• <ul>
+• <li>average below 4.0 (task: 3 - 3.9) -> GLOOMY, no bonus;</li>
+• <li>average 4.0 - 4.5 -> SATISFIED, 5 thousand;</li>
+• <li>average 4.6 - 5.0 (task: "5.6-5") -> JOYFUL, 10 thousand.</li>
+• </ul>
+• Averages between 4.5 and 4.6 (not covered by the task) are treated as SATISFIED.
+*/
+public enum ParentMood {
+NEUTRAL("neutral", 0), // initial state, before the session results are known
+GLOOMY("gloomy", 0),
+SATISFIED("satisfied", 5),
+JOYFUL("joyful", 10);
+
+public static final double SATISFIED_FROM = 4.0;
+public static final double JOYFUL_FROM = 4.6;
+
+private final String title;
+private final int bonus;
+
+ParentMood(String title, int bonus) {
+this.title = title;
+this.bonus = bonus;
+}
+
+/** Bonus in thousands. */
+public int getBonus() {
+return bonus;
+}
+
+/** Determines the mood of a parent by the average grade of the student. */
+public static ParentMood forAverage(double average) {
+if (average >= JOYFUL_FROM) {
+return JOYFUL;
+}
+if (average >= SATISFIED_FROM) {
+return SATISFIED;
+}
+return GLOOMY;
+}
+
+@Override
+public String toString() {
+return title;
+}
+}

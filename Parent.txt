@@ -1,0 +1,76 @@
+package lab2.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/** A parent of one or several students. Pays bonuses depending on the students' results. */
+public class Parent extends Person {
+
+private final List<Student> children = new ArrayList<Student>();
+private ParentMood mood = ParentMood.NEUTRAL;
+private int totalBonusPaid; // in thousands
+private boolean reviewed;
+
+public Parent(String name, int age, Gender gender) {
+super(name, age, gender);
+}
+
+public void addChild(Student student) {
+if (student == null) {
+throw new IllegalArgumentException("Student must not be null");
+}
+if (student.getParent() != null) {
+throw new IllegalStateException(student.getName() + " already has a parent");
+}
+children.add(student);
+student.setParent(this);
+}
+
+public List<Student> getChildren() {
+return Collections.unmodifiableList(children);
+}
+
+public ParentMood getMood() {
+return mood;
+}
+
+public int getTotalBonusPaid() {
+return totalBonusPaid;
+}
+
+/**
+* Reviews the session results: every child gets the bonus corresponding to his own
+* average grade; the parent's status is determined by the mean of the children's averages.
+* Bonuses are paid only once.
+*/
+public void reviewResults() {
+if (reviewed || children.isEmpty()) {
+return;
+}
+double sumOfAverages = 0.0;
+for (Student child : children) {
+double average = child.getAverageGrade();
+int bonus = ParentMood.forAverage(average).getBonus();
+child.receiveBonus(bonus);
+totalBonusPaid += bonus;
+sumOfAverages += average;
+}
+mood = ParentMood.forAverage(sumOfAverages / children.size());
+reviewed = true;
+}
+
+@Override
+public String toString() {
+StringBuilder names = new StringBuilder();
+for (Student child : children) {
+if (names.length() > 0) {
+names.append(", ");
+}
+names.append(child.getName());
+}
+return "Parent: " + super.toString() + ", status: " + mood + ", student(s): "
++ (names.length() == 0 ? "-" : names) + ", bonuses paid: " + totalBonusPaid
++ " thousand";
+}
+}

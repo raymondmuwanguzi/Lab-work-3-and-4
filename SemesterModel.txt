@@ -1,0 +1,68 @@
+package lab2.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+/** The whole model of one semester: a group of students, their parents and teachers. */
+public class SemesterModel {
+
+private final int weeks;
+private final List<Student> students = new ArrayList<Student>();
+private final List<Parent> parents = new ArrayList<Parent>();
+private final List<Teacher> teachers = new ArrayList<Teacher>();
+
+public SemesterModel(int weeks) {
+if (weeks < Student.MAX_GRADES_PER_SUBJECT) {
+throw new IllegalArgumentException(
+"A semester must have at least " + Student.MAX_GRADES_PER_SUBJECT + " weeks");
+}
+this.weeks = weeks;
+}
+
+public int getWeeks() {
+return weeks;
+}
+
+public void addStudent(Student student) {
+students.add(student);
+}
+
+public void addParent(Parent parent) {
+parents.add(parent);
+}
+
+public void addTeacher(Teacher teacher) {
+teachers.add(teacher);
+}
+
+public List<Student> getStudents() {
+return Collections.unmodifiableList(students);
+}
+
+public List<Parent> getParents() {
+return Collections.unmodifiableList(parents);
+}
+
+public List<Teacher> getTeachers() {
+return Collections.unmodifiableList(teachers);
+}
+
+/** Subjects taught in the semester, in the order of the teachers. */
+public List<Subject> getSubjects() {
+Set<Subject> subjects = new LinkedHashSet<Subject>();
+for (Teacher t : teachers) {
+subjects.add(t.getSubject());
+}
+return new ArrayList<Subject>(subjects);
+}
+
+/** End of the semester: every parent reviews the results and pays the bonuses. */
+public void settleBonuses() {
+for (Parent p : parents) {
+p.reviewResults();
+}
+}
+}

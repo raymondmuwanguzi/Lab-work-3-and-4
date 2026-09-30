@@ -1,0 +1,16 @@
+package lab2;
+
+import lab2.controller.SemesterController;
+import lab2.model.SemesterModel;
+import lab2.view.ConsoleView;
+
+/** Entry point of laboratory work No. 2, variant 1: model of a student's semester. */
+public class Main {
+
+public static void main(String[] args) {
+SemesterModel model = new SemesterModel(SemesterController.WEEKS);
+ConsoleView view = new ConsoleView();
+SemesterController controller = new SemesterController(model, view, 2026L);
+controller.run();
+}
+}

@@ -1,0 +1,51 @@
+package lab2.model;
+
+/** A single immutable mark given by a teacher in a given week of the semester. */
+public class Grade {
+
+public static final int MIN_VALUE = 2;
+public static final int MAX_VALUE = 5;
+
+private final int value;
+private final int week;
+private final Subject subject;
+private final Teacher teacher;
+
+public Grade(int value, int week, Subject subject, Teacher teacher) {
+if (value < MIN_VALUE || value > MAX_VALUE) {
+throw new IllegalArgumentException(
+"Grade must be in range " + MIN_VALUE + ".." + MAX_VALUE + ": " + value);
+}
+if (week < 1) {
+throw new IllegalArgumentException("Week number must be >= 1: " + week);
+}
+if (subject == null || teacher == null) {
+throw new IllegalArgumentException("Subject and teacher must not be null");
+}
+this.value = value;
+this.week = week;
+this.subject = subject;
+this.teacher = teacher;
+}
+
+public int getValue() {
+return value;
+}
+
+public int getWeek() {
+return week;
+}
+
+public Subject getSubject() {
+return subject;
+}
+
+public Teacher getTeacher() {
+return teacher;
+}
+
+@Override
+public String toString() {
+return "week " + week + ": " + subject + " = " + value;
+}
+}

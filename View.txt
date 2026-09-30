@@ -1,0 +1,136 @@
+package lab2.view;
+
+import java.util.List;
+import java.util.Locale;
+
+import lab2.model.Grade;
+import lab2.model.Parent;
+import lab2.model.SemesterModel;
+import lab2.model.Student;
+import lab2.model.Subject;
+import lab2.model.Teacher;
+
+/** View: prints everything to the console. Contains no business logic. */
+public class ConsoleView {
+
+private static final String LINE =
+"------------------------------------------------------------------------------------------";
+
+public void showTitle(String title) {
+System.out.println();
+System.out.println("");
+System.out.println(title);
+System.out.println("");
+}
+
+public void showMessage(String message) {
+System.out.println(message);
+}
+
+/** Prints the teachers (with their subjects) and the students (with their parents). */
+public void showParticipants(SemesterModel model) {
+showTitle("PARTICIPANTS OF THE MODEL");
+System.out.println("Teachers (" + model.getTeachers().size() + "):");
+for (Teacher t : model.getTeachers()) {
+System.out.println(" " + t);
+}
+System.out.println("Students (" + model.getStudents().size() + "):");
+for (Student s : model.getStudents()) {
+String parent = s.getParent() == null ? "-" : s.getParent().getName();
+System.out.println(" " + s.getName() + ", age " + s.getAge() + ", " + s.getGender()
++ " (parent: " + parent + ")");
+}
+}
+
+/** Prints the grades issued during one week. */
+public void showWeek(int week, List<Grade> issued) {
+System.out.printf("Week %2d: %3d grade(s) issued%n", week, issued.size());
+}
+
+/** Prints the grade journal: all grades of every student, subject by subject. */
+public void showJournal(SemesterModel model) {
+showTitle("GRADE JOURNAL (grade@week)");
+for (Student s : model.getStudents()) {
+System.out.println(s.getName());
+for (Subject subject : model.getSubjects()) {
+StringBuilder sb = new StringBuilder();
+for (Grade g : s.getGrades(subject)) {
+if (sb.length() > 0) {
+sb.append(' ');
+}
+sb.append(g.getValue()).append('@').append(g.getWeek());
+}
+System.out.printf(" %-18s [%2d] %s%n", subject.getTitle(), s.getGradeCount(subject), sb);
+}
+}
+}
+
+/** Prints the table of average grades per subject and overall. */
+public void showAverageTable(SemesterModel model) {
+showTitle("AVERAGE GRADES");
+StringBuilder header = new StringBuilder(String.format("%-22s", "Student"));
+for (Subject subject : model.getSubjects()) {
+header.append(String.format(" %-12s", shorten(subject.getTitle(), 12)));
+}
+header.append(String.format(" %-8s", "Overall"));
+System.out.println(header);
+System.out.println(LINE);
+for (Student s : model.getStudents()) {
+StringBuilder row = new StringBuilder(String.format("%-22s", s.getName()));
+for (Subject subject : model.getSubjects()) {
+row.append(String.format(Locale.US, " %-12.2f", s.getAverageGrade(subject)));
+}
+row.append(String.format(Locale.US, " %-8.2f", s.getAverageGrade()));
+System.out.println(row);
+}
+}
+
+/** Prints the final descriptions of everybody using the overridden toString() methods. */
+public void showResults(SemesterModel model) {
+showTitle("RESULTS OF THE SEMESTER");
+System.out.println("Teachers:");
+for (Teacher t : model.getTeachers()) {
+System.out.println(" " + t);
+}
+System.out.println("Students:");
+for (Student s : model.getStudents()) {
+System.out.println(" " + s);
+}
+System.out.println("Parents:");
+for (Parent p : model.getParents()) {
+System.out.println(" " + p);
+}
+}
+
+/** Prints the total amount of bonuses. */
+public void showTotals(SemesterModel model) {
+int total = 0;
+int gloomy = 0;
+int satisfied = 0;
+int joyful = 0;
+for (Parent p : model.getParents()) {
+total += p.getTotalBonusPaid();
+switch (p.getMood()) {
+case GLOOMY:
+gloomy++;
+break;
+case SATISFIED:
+satisfied++;
+break;
+case JOYFUL:
+joyful++;
+break;
+default:
+break;
+}
+}
+System.out.println(LINE);
+System.out.println("Parents by status: gloomy = " + gloomy + ", satisfied = " + satisfied
++ ", joyful = " + joyful);
+System.out.println("Total bonuses paid: " + total + " thousand");
+}
+
+private static String shorten(String text, int max) {
+return text.length() <= max ? text : text.substring(0, max);
+}
+}

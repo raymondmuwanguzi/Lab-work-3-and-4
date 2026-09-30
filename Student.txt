@@ -1,0 +1,130 @@
+package lab2.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/** A student who receives grades in several subjects during the semester. */
+public class Student extends Person {
+
+/** A teacher may give at most this many grades to one student in his subject. */
+public static final int MAX_GRADES_PER_SUBJECT = 10;
+
+private final Map<Subject, List<Grade>> grades = new LinkedHashMap<Subject, List<Grade>>();
+private Parent parent;
+private int bonus; // in thousands
+
+public Student(String name, int age, Gender gender) {
+super(name, age, gender);
+}
+
+public Parent getParent() {
+return parent;
+}
+
+/** Package-private: the link is maintained by {@link Parent#addChild(Student)}. */
+void setParent(Parent parent) {
+this.parent = parent;
+}
+
+/** Number of grades received in the subject. */
+public int getGradeCount(Subject subject) {
+List<Grade> list = grades.get(subject);
+return list == null ? 0 : list.size();
+}
+
+/** True if the student already has a grade in this subject for the given week. */
+public boolean hasGradeInWeek(Subject subject, int week) {
+List<Grade> list = grades.get(subject);
+if (list == null) {
+return false;
+}
+for (Grade g : list) {
+if (g.getWeek() == week) {
+return true;
+}
+}
+return false;
+}
+
+/**
+* Adds a grade. Enforces the rules of the task: no more than 10 grades per subject
+* and no more than one grade per week per subject.
+*/
+public void addGrade(Grade grade) {
+if (grade == null) {
+throw new IllegalArgumentException("Grade must not be null");
+}
+Subject subject = grade.getSubject();
+if (getGradeCount(subject) >= MAX_GRADES_PER_SUBJECT) {
+throw new IllegalStateException(getName() + " already has " + MAX_GRADES_PER_SUBJECT
++ " grades in " + subject);
+}
+if (hasGradeInWeek(subject, grade.getWeek())) {
+throw new IllegalStateException(getName() + " already has a grade in " + subject
++ " for week " + grade.getWeek());
+}
+List<Grade> list = grades.get(subject);
+if (list == null) {
+list = new ArrayList<Grade>();
+grades.put(subject, list);
+}
+list.add(grade);
+}
+
+/** Read-only view of the grades in a subject. */
+public List<Grade> getGrades(Subject subject) {
+List<Grade> list = grades.get(subject);
+if (list == null) {
+return Collections.emptyList();
+}
+return Collections.unmodifiableList(list);
+}
+
+/** Average grade in one subject (0 if there are no grades). */
+public double getAverageGrade(Subject subject) {
+return average(grades.get(subject));
+}
+
+/** Average grade for the whole session over all subjects (0 if there are no grades). */
+public double getAverageGrade() {
+List<Grade> all = new ArrayList<Grade>();
+for (List<Grade> list : grades.values()) {
+all.addAll(list);
+}
+return average(all);
+}
+
+private static double average(List<Grade> list) {
+if (list == null || list.isEmpty()) {
+return 0.0;
+}
+int sum = 0;
+for (Grade g : list) {
+sum += g.getValue();
+}
+return (double) sum / list.size();
+}
+
+/** Bonus received from the parent, in thousands. */
+public int getBonus() {
+return bonus;
+}
+
+public void receiveBonus(int amount) {
+if (amount < 0) {
+throw new IllegalArgumentException("Bonus must not be negative: " + amount);
+}
+bonus += amount;
+}
+
+@Override
+public String toString() {
+return String.format(Locale.US,
+"Student: %s, average grade for the session: %.2f, bonus: %d thousand",
+super.toString(), getAverageGrade(), bonus);
+}
+}

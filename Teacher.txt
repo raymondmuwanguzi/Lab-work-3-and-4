@@ -1,0 +1,44 @@
+package lab2.model;
+
+/** A teacher who gives grades to students in his own subject. */
+public class Teacher extends Person {
+
+private final Subject subject;
+
+public Teacher(String name, int age, Gender gender, Subject subject) {
+super(name, age, gender);
+if (subject == null) {
+throw new IllegalArgumentException("Subject must not be null");
+}
+this.subject = subject;
+}
+
+public Subject getSubject() {
+return subject;
+}
+
+/** Can the teacher give a grade to the student in the given week (10 max, 1 per week)? */
+public boolean canGrade(Student student, int week) {
+return student.getGradeCount(subject) < Student.MAX_GRADES_PER_SUBJECT
+&& !student.hasGradeInWeek(subject, week);
+}
+
+/**
+* Gives a grade to the student for the teacher's subject.
+*
+* @throws IllegalStateException if the limits of the task are violated
+*/
+public Grade grade(Student student, int week, int value) {
+if (student == null) {
+throw new IllegalArgumentException("Student must not be null");
+}
+Grade grade = new Grade(value, week, subject, this);
+student.addGrade(grade);
+return grade;
+}
+
+@Override
+public String toString() {
+return "Teacher: " + super.toString() + ", subject: " + subject;
+}
+}
