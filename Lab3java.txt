@@ -1,0 +1,1916 @@
+Lab 3 - all source files (copy one by one)
+
+Create the files in this order. For each one: right-click the package > New > Class (or File for logging.properties), use the exact name shown, delete what Eclipse generates and paste the code.
+
+1. src/lab3/model/Gender.java
+
+java
+package lab3.model;
+
+/** Gender of a person. */
+public enum Gender {
+    MALE("male"),
+    FEMALE("female");
+
+    private final String title;
+
+    Gender(String title) {
+        this.title = title;
+    }
+
+    @Override
+    public String toString() {
+        return title;
+    }
+}
+
+
+2. src/lab3/model/Person.java
+
+java
+package lab3.model;
+
+/** Base class for every human in the model: name, age and gender. */
+public abstract class Person {
+
+    private final String name;
+    private final int age;
+    private final Gender gender;
+
+    protected Person(String name, int age, Gender gender) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Name must not be empty");
+        }
+        if (age <= 0) {
+            throw new IllegalArgumentException("Age must be positive: " + age);
+        }
+        if (gender == null) {
+            throw new IllegalArgumentException("Gender must not be null");
+        }
+        this.name = name;
+        this.age = age;
+        this.gender = gender;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public Gender getGender() {
+        return gender;
+    }
+
+    /** Common part of the description used by subclasses: name, age, gender. */
+    @Override
+    public String toString() {
+        return name + ", age " + age + ", " + gender;
+    }
+}
+
+
+3. src/lab3/model/Subject.java
+
+java
+package lab3.model;
+
+/** A subject (discipline) taught during the semester. */
+public class Subject {
+
+    private final String title;
+
+    public Subject(String title) {
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Subject title must not be empty");
+        }
+        this.title = title;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Subject)) {
+            return false;
+        }
+        return title.equals(((Subject) o).title);
+    }
+
+    @Override
+    public int hashCode() {
+        return title.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return title;
+    }
+}
+
+
+4. src/lab3/model/Grade.java
+
+java
+package lab3.model;
+
+/** A single immutable mark given by a teacher in a given week of the semester. */
+public class Grade {
+
+    public static final int MIN_VALUE = 2;
+    public static final int MAX_VALUE = 5;
+
+    private final int value;
+    private final int week;
+    private final Subject subject;
+    private final Teacher teacher;
+
+    public Grade(int value, int week, Subject subject, Teacher teacher) {
+        if (value < MIN_VALUE || value > MAX_VALUE) {
+            throw new IllegalArgumentException(
+                    "Grade must be in range " + MIN_VALUE + ".." + MAX_VALUE + ": " + value);
+        }
+        if (week < 1) {
+            throw new IllegalArgumentException("Week number must be >= 1: " + week);
+        }
+        if (subject == null || teacher == null) {
+            throw new IllegalArgumentException("Subject and teacher must not be null");
+        }
+        this.value = value;
+        this.week = week;
+        this.subject = subject;
+        this.teacher = teacher;
+    }
+
+    public int getValue() {
+        return value;
+    }
+
+    public int getWeek() {
+        return week;
+    }
+
+    public Subject getSubject() {
+        return subject;
+    }
+
+    public Teacher getTeacher() {
+        return teacher;
+    }
+
+    @Override
+    public String toString() {
+        return "week " + week + ": " + subject + " = " + value;
+    }
+}
+
+
+5. src/lab3/model/ParentMood.java
+
+java
+package lab3.model;
+
+/**
+ * Status ("mood") of a parent and the size of the bonus (in thousands) paid to the student.
+ * <ul>
+ * <li>average below 4.0 (task: 3 - 3.9)  -> GLOOMY, no bonus;</li>
+ * <li>average 4.0 - 4.5                  -> SATISFIED, 5 thousand;</li>
+ * <li>average 4.6 - 5.0 (task: "5.6-5")  -> JOYFUL, 10 thousand.</li>
+ * </ul>
+ * Averages between 4.5 and 4.6 (not covered by the task) are treated as SATISFIED.
+ */
+public enum ParentMood {
+    NEUTRAL("neutral", 0),     // initial state, before the session results are known
+    GLOOMY("gloomy", 0),
+    SATISFIED("satisfied", 5),
+    JOYFUL("joyful", 10);
+
+    public static final double SATISFIED_FROM = 4.0;
+    public static final double JOYFUL_FROM = 4.6;
+
+    private final String title;
+    private final int bonus;
+
+    ParentMood(String title, int bonus) {
+        this.title = title;
+        this.bonus = bonus;
+    }
+
+    /** Bonus in thousands. */
+    public int getBonus() {
+        return bonus;
+    }
+
+    /** Determines the mood of a parent by the average grade of the student. */
+    public static ParentMood forAverage(double average) {
+        if (average >= JOYFUL_FROM) {
+            return JOYFUL;
+        }
+        if (average >= SATISFIED_FROM) {
+            return SATISFIED;
+        }
+        return GLOOMY;
+    }
+
+    @Override
+    public String toString() {
+        return title;
+    }
+}
+
+
+6. src/lab3/model/Student.java
+
+java
+package lab3.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/** A student who receives grades in several subjects during the semester. */
+public class Student extends Person {
+
+    /** A teacher may give at most this many grades to one student in his subject. */
+    public static final int MAX_GRADES_PER_SUBJECT = 10;
+
+    private final Map<Subject, List<Grade>> grades = new LinkedHashMap<Subject, List<Grade>>();
+    private Parent parent;
+    private int bonus; // in thousands
+
+    public Student(String name, int age, Gender gender) {
+        super(name, age, gender);
+    }
+
+    public Parent getParent() {
+        return parent;
+    }
+
+    /** Package-private: the link is maintained by {@link Parent#addChild(Student)}. */
+    void setParent(Parent parent) {
+        this.parent = parent;
+    }
+
+    /** Number of grades received in the subject. */
+    public int getGradeCount(Subject subject) {
+        List<Grade> list = grades.get(subject);
+        return list == null ? 0 : list.size();
+    }
+
+    /** True if the student already has a grade in this subject for the given week. */
+    public boolean hasGradeInWeek(Subject subject, int week) {
+        List<Grade> list = grades.get(subject);
+        if (list == null) {
+            return false;
+        }
+        for (Grade g : list) {
+            if (g.getWeek() == week) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Adds a grade. Enforces the rules of the task: no more than 10 grades per subject
+     * and no more than one grade per week per subject.
+     */
+    public void addGrade(Grade grade) {
+        if (grade == null) {
+            throw new IllegalArgumentException("Grade must not be null");
+        }
+        Subject subject = grade.getSubject();
+        if (getGradeCount(subject) >= MAX_GRADES_PER_SUBJECT) {
+            throw new IllegalStateException(getName() + " already has " + MAX_GRADES_PER_SUBJECT
+                    + " grades in " + subject);
+        }
+        if (hasGradeInWeek(subject, grade.getWeek())) {
+            throw new IllegalStateException(getName() + " already has a grade in " + subject
+                    + " for week " + grade.getWeek());
+        }
+        List<Grade> list = grades.get(subject);
+        if (list == null) {
+            list = new ArrayList<Grade>();
+            grades.put(subject, list);
+        }
+        list.add(grade);
+    }
+
+    /** Read-only view of the grades in a subject. */
+    public List<Grade> getGrades(Subject subject) {
+        List<Grade> list = grades.get(subject);
+        if (list == null) {
+            return Collections.emptyList();
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    /** Average grade in one subject (0 if there are no grades). */
+    public double getAverageGrade(Subject subject) {
+        return average(grades.get(subject));
+    }
+
+    /** Average grade for the whole session over all subjects (0 if there are no grades). */
+    public double getAverageGrade() {
+        List<Grade> all = new ArrayList<Grade>();
+        for (List<Grade> list : grades.values()) {
+            all.addAll(list);
+        }
+        return average(all);
+    }
+
+    private static double average(List<Grade> list) {
+        if (list == null || list.isEmpty()) {
+            return 0.0;
+        }
+        int sum = 0;
+        for (Grade g : list) {
+            sum += g.getValue();
+        }
+        return (double) sum / list.size();
+    }
+
+    /** Bonus received from the parent, in thousands. */
+    public int getBonus() {
+        return bonus;
+    }
+
+    public void receiveBonus(int amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Bonus must not be negative: " + amount);
+        }
+        bonus += amount;
+    }
+
+    @Override
+    public String toString() {
+        return String.format(Locale.US,
+                "Student: %s, average grade for the session: %.2f, bonus: %d thousand",
+                super.toString(), getAverageGrade(), bonus);
+    }
+}
+
+
+7. src/lab3/model/Parent.java
+
+java
+package lab3.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/** A parent of one or several students. Pays bonuses depending on the students' results. */
+public class Parent extends Person {
+
+    private final List<Student> children = new ArrayList<Student>();
+    private ParentMood mood = ParentMood.NEUTRAL;
+    private int totalBonusPaid; // in thousands
+    private boolean reviewed;
+
+    public Parent(String name, int age, Gender gender) {
+        super(name, age, gender);
+    }
+
+    public void addChild(Student student) {
+        if (student == null) {
+            throw new IllegalArgumentException("Student must not be null");
+        }
+        if (student.getParent() != null) {
+            throw new IllegalStateException(student.getName() + " already has a parent");
+        }
+        children.add(student);
+        student.setParent(this);
+    }
+
+    public List<Student> getChildren() {
+        return Collections.unmodifiableList(children);
+    }
+
+    public ParentMood getMood() {
+        return mood;
+    }
+
+    public int getTotalBonusPaid() {
+        return totalBonusPaid;
+    }
+
+    /**
+     * Reviews the session results: every child gets the bonus corresponding to his own
+     * average grade; the parent's status is determined by the mean of the children's averages.
+     * Bonuses are paid only once.
+     */
+    public void reviewResults() {
+        if (reviewed || children.isEmpty()) {
+            return;
+        }
+        double sumOfAverages = 0.0;
+        for (Student child : children) {
+            double average = child.getAverageGrade();
+            int bonus = ParentMood.forAverage(average).getBonus();
+            child.receiveBonus(bonus);
+            totalBonusPaid += bonus;
+            sumOfAverages += average;
+        }
+        mood = ParentMood.forAverage(sumOfAverages / children.size());
+        reviewed = true;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder names = new StringBuilder();
+        for (Student child : children) {
+            if (names.length() > 0) {
+                names.append(", ");
+            }
+            names.append(child.getName());
+        }
+        return "Parent: " + super.toString() + ", status: " + mood + ", student(s): "
+                + (names.length() == 0 ? "-" : names) + ", bonuses paid: " + totalBonusPaid
+                + " thousand";
+    }
+}
+
+
+8. src/lab3/model/Teacher.java
+
+java
+package lab3.model;
+
+/** A teacher who gives grades to students in his own subject. */
+public class Teacher extends Person {
+
+    private final Subject subject;
+
+    public Teacher(String name, int age, Gender gender, Subject subject) {
+        super(name, age, gender);
+        if (subject == null) {
+            throw new IllegalArgumentException("Subject must not be null");
+        }
+        this.subject = subject;
+    }
+
+    public Subject getSubject() {
+        return subject;
+    }
+
+    /** Can the teacher give a grade to the student in the given week (10 max, 1 per week)? */
+    public boolean canGrade(Student student, int week) {
+        return student.getGradeCount(subject) < Student.MAX_GRADES_PER_SUBJECT
+                && !student.hasGradeInWeek(subject, week);
+    }
+
+    /**
+     * Gives a grade to the student for the teacher's subject.
+     *
+     * @throws IllegalStateException if the limits of the task are violated
+     */
+    public Grade grade(Student student, int week, int value) {
+        if (student == null) {
+            throw new IllegalArgumentException("Student must not be null");
+        }
+        Grade grade = new Grade(value, week, subject, this);
+        student.addGrade(grade);
+        return grade;
+    }
+
+    @Override
+    public String toString() {
+        return "Teacher: " + super.toString() + ", subject: " + subject;
+    }
+}
+
+
+9. src/lab3/model/SemesterModel.java
+
+java
+package lab3.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+/** The whole model of one semester: a group of students, their parents and teachers. */
+public class SemesterModel {
+
+    private final int weeks;
+    private final List<Student> students = new ArrayList<Student>();
+    private final List<Parent> parents = new ArrayList<Parent>();
+    private final List<Teacher> teachers = new ArrayList<Teacher>();
+
+    public SemesterModel(int weeks) {
+        if (weeks < Student.MAX_GRADES_PER_SUBJECT) {
+            throw new IllegalArgumentException(
+                    "A semester must have at least " + Student.MAX_GRADES_PER_SUBJECT + " weeks");
+        }
+        this.weeks = weeks;
+    }
+
+    public int getWeeks() {
+        return weeks;
+    }
+
+    public void addStudent(Student student) {
+        students.add(student);
+    }
+
+    public void addParent(Parent parent) {
+        parents.add(parent);
+    }
+
+    public void addTeacher(Teacher teacher) {
+        teachers.add(teacher);
+    }
+
+    public List<Student> getStudents() {
+        return Collections.unmodifiableList(students);
+    }
+
+    public List<Parent> getParents() {
+        return Collections.unmodifiableList(parents);
+    }
+
+    public List<Teacher> getTeachers() {
+        return Collections.unmodifiableList(teachers);
+    }
+
+    /** Subjects taught in the semester, in the order of the teachers. */
+    public List<Subject> getSubjects() {
+        Set<Subject> subjects = new LinkedHashSet<Subject>();
+        for (Teacher t : teachers) {
+            subjects.add(t.getSubject());
+        }
+        return new ArrayList<Subject>(subjects);
+    }
+
+    /** End of the semester: every parent reviews the results and pays the bonuses. */
+    public void settleBonuses() {
+        for (Parent p : parents) {
+            p.reviewResults();
+        }
+    }
+}
+
+
+10. src/lab3/generator/RandomDataGenerator.java
+
+java
+package lab3.generator;
+
+import java.util.List;
+import java.util.Random;
+
+import lab3.model.Gender;
+import lab3.model.Grade;
+import lab3.model.Parent;
+import lab3.model.SemesterModel;
+import lab3.model.Student;
+import lab3.model.Subject;
+import lab3.model.Teacher;
+
+/**
+ * Generates random objects of the Lab 2 model.
+ * <p>
+ * The main class of the model is {@link SemesterModel}; it directly consists of
+ * {@link Teacher}s (each with a {@link Subject}), {@link Student}s and {@link Parent}s,
+ * so there is a separate generator method for every one of these classes
+ * (plus {@link #generateGrades(SemesterModel, int, int, double)} for the grades).
+ */
+public class RandomDataGenerator {
+
+    private static final String[] SUBJECT_TITLES = {
+        "Mathematics", "Physics", "Programming", "History", "English"
+    };
+    /** Subjects are immutable, so the same instances are shared by all generated models. */
+    private static final Subject[] SUBJECTS = createSubjects();
+
+    private static final String[] MALE_NAMES = {
+        "Alexey", "Dmitry", "Sergey", "Pavel", "Nikita", "Ivan", "Andrey", "Oleg", "Boris", "Viktor"
+    };
+    private static final String[] FEMALE_NAMES = {
+        "Maria", "Anna", "Olga", "Elena", "Irina", "Tatiana", "Natalia", "Galina", "Svetlana", "Daria"
+    };
+    /** Men's forms of the last names; women get the ending "a". */
+    private static final String[] LAST_NAMES = {
+        "Volkov", "Orlov", "Belov", "Kotov", "Lebedev", "Morozov", "Zaitsev", "Fedorov", "Egorov",
+        "Pavlov", "Smirnov", "Kuznetsov", "Popov", "Sokolov", "Mikhailov", "Novikov"
+    };
+
+    private final Random random;
+
+    public RandomDataGenerator(long seed) {
+        this.random = new Random(seed);
+    }
+
+    private static Subject[] createSubjects() {
+        Subject[] result = new Subject[SUBJECT_TITLES.length];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = new Subject(SUBJECT_TITLES[i]);
+        }
+        return result;
+    }
+
+    /** Maximum number of different subjects (and therefore teachers) a generated model can have. */
+    public static int getMaxTeachers() {
+        return SUBJECTS.length;
+    }
+
+    // ------------------------------------------------------------------ simple objects
+
+    private Gender randomGender() {
+        return random.nextBoolean() ? Gender.MALE : Gender.FEMALE;
+    }
+
+    private String randomName(Gender gender) {
+        String[] firstNames = gender == Gender.MALE ? MALE_NAMES : FEMALE_NAMES;
+        return firstNames[random.nextInt(firstNames.length)] + " "
+                + LAST_NAMES[random.nextInt(LAST_NAMES.length)] + (gender == Gender.MALE ? "" : "a");
+    }
+
+    /** Random subject from the list of known subjects. */
+    public Subject generateSubject() {
+        return SUBJECTS[random.nextInt(SUBJECTS.length)];
+    }
+
+    /** Random teacher (age 30..65) who teaches the given subject. */
+    public Teacher generateTeacher(Subject subject) {
+        Gender gender = randomGender();
+        return new Teacher(randomName(gender), 30 + random.nextInt(36), gender, subject);
+    }
+
+    /** Random student (age 17..23). */
+    public Student generateStudent() {
+        Gender gender = randomGender();
+        return new Student(randomName(gender), 17 + random.nextInt(7), gender);
+    }
+
+    /** Random parent (age 38..60); children are attached by the caller via addChild. */
+    public Parent generateParent() {
+        Gender gender = randomGender();
+        return new Parent(randomName(gender), 38 + random.nextInt(23), gender);
+    }
+
+    /** Random mark in range Grade.MIN_VALUE..Grade.MAX_VALUE depending on the talent (0..1). */
+    public int generateMark(double talent) {
+        double expected = 3.2 + 2.0 * talent;
+        long mark = Math.round(expected + random.nextGaussian() * 0.6);
+        return (int) Math.max(Grade.MIN_VALUE, Math.min(Grade.MAX_VALUE, mark));
+    }
+
+    // ------------------------------------------------------------------ main class
+
+    /**
+     * Generates the main class of the model: a semester with the given number of weeks,
+     * teachers (every teacher has his own subject), students and a parent for each student.
+     * No grades are issued yet.
+     *
+     * @throws IllegalArgumentException if the parameters do not fit the rules of the model
+     */
+    public SemesterModel generateModel(int weeks, int teacherCount, int studentCount) {
+        if (teacherCount < 1 || teacherCount > SUBJECTS.length) {
+            throw new IllegalArgumentException("Teacher count must be in range 1.." + SUBJECTS.length
+                    + ": " + teacherCount);
+        }
+        if (studentCount < 1) {
+            throw new IllegalArgumentException("Student count must be positive: " + studentCount);
+        }
+        SemesterModel model = new SemesterModel(weeks); // checks the number of weeks itself
+
+        // teachers: random distinct subjects (partial Fisher-Yates shuffle of the subject indices)
+        int[] order = new int[SUBJ
+
+
+11. src/lab3/controller/ExperimentException.java
+
+java
+package lab3.controller;
+
+/** Checked exception: an experiment cannot be run with the given parameters. */
+public class ExperimentException extends Exception {
+
+    private static final long serialVersionUID = 1L;
+
+    public ExperimentException(String message) {
+        super(message);
+    }
+
+    public ExperimentException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+
+12. src/lab3/controller/ErrMsgLog.java
+
+java
+package lab3.controller;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+
+/**
+ * Common class for error handling, messages and logging (Appendix 2 of the lab).
+ * <ul>
+ * <li>keeps the list of all registered errors, so the number of errors is always known;</li>
+ * <li>writes the errors to the error log (java.util.logging, configured in logging.properties);</li>
+ * <li>writes the operation logs of the experiments (one text file per experiment).</li>
+ * </ul>
+ */
+public class ErrMsgLog {
+
+    /** Folder for all log files. It must be the same as in logging.properties. */
+    public static final String LOG_DIR = "logs";
+    private static final String CONFIG_RESOURCE = "logging.properties";
+
+    private final List<Exception> errList = new ArrayList<Exception>();
+    private final Logger log;
+    private FileHandler fallbackHandler; // used only if logging.properties was not found
+    private BufferedWriter operationLog;
+
+    public ErrMsgLog() throws IOException {
+        Files.createDirectories(Paths.get(LOG_DIR));
+        InputStream config = ErrMsgLog.class.getResourceAsStream(CONFIG_RESOURCE);
+        Logger logger = Logger.getLogger(ErrMsgLog.class.getName());
+        if (config != null) {
+            try {
+                LogManager.getLogManager().readConfiguration(config);
+            } finally {
+                config.close();
+            }
+        } else {
+            // the resource was not copied next to the classes: configure the logger in code
+            fallbackHandler = new FileHandler(LOG_DIR + "/err_log.txt", true);
+            fallbackHandler.setFormatter(new SimpleFormatter());
+            logger.setUseParentHandlers(false);
+            logger.addHandler(fallbackHandler);
+        }
+        this.log = logger;
+    }
+
+    // ------------------------------------------------------------------ errors
+
+    /** Adds the error to the list of errors. */
+    public int addErr(Exception e) {
+        errList.add(e);
+        return errList.size();
+    }
+
+    /** Adds the error to the list of errors and writes it to the log. */
+    public int addErrWithLog(Exception e) {
+        errList.add(e);
+        log.log(Level.WARNING, e.getClass().getSimpleName() + ": " + e.getMessage());
+        return errList.size();
+    }
+
+    /** Number of registered errors. */
+    public int getErrCount() {
+        return errList.size();
+    }
+
+    /** Shows the text of the error. */
+    public void showErrText(Exception e) {
+        System.err.println(e.getMessage());
+    }
+
+    /**
+     * Registers the error (list and log) and returns a new exception that can be thrown
+     * to the upper level.
+     */
+    public Exception makeErr(Exception e) {
+        addErrWithLog(e);
+        return new Exception(e.getMessage(), e);
+    }
+
+    // ------------------------------------------------------------------ operation logs
+
+    /** Starts a new log file with the given name in the log folder. */
+    public void startOperationLog(String fileName) throws IOException {
+        finishOperationLog();
+        operationLog = new BufferedWriter(new OutputStreamWriter(
+                Files.newOutputStream(Paths.get(LOG_DIR, fileName)), StandardCharsets.UTF_8));
+    }
+
+    /** Writes one line to the current log file. */
+    public void writeOperationLine(String line) throws IOException {
+        if (operationLog == null) {
+            throw new IOException("The log file is not opened");
+        }
+        operationLog.write(line);
+        operationLog.newLine();
+    }
+
+    /** Closes the current log file (does nothing if there is none). */
+    public void finishOperationLog() throws IOException {
+        if (operationLog != null) {
+            BufferedWriter writer = operationLog;
+            operationLog = null;
+            writer.close();
+        }
+    }
+
+    /** Releases the log files. Call it at the end of the program. */
+    public void close() {
+        try {
+            finishOperationLog();
+        } catch (IOException e) {
+            System.err.println("Cannot close the log file: " + e.getMessage());
+        }
+        if (fallbackHandler != null) {
+            fallbackHandler.close();
+        }
+        LogManager.getLogManager().reset(); // closes the handlers of the error log
+    }
+}
+
+
+13. src/lab3/controller/OperationStats.java
+
+java
+package lab3.controller;
+
+import java.util.Arrays;
+
+/** Execution times (in nanoseconds) of the operations of one type: count, total, average, median. */
+public class OperationStats {
+
+    private final String operation;
+    private long[] times = new long[16];
+    private int count;
+    private long total;
+
+    public OperationStats(String operation) {
+        this.operation = operation;
+    }
+
+    public String getOperation() {
+        return operation;
+    }
+
+    public void record(long nanos) {
+        if (count == times.length) {
+            times = Arrays.copyOf(times, count * 2);
+        }
+        times[count++] = nanos;
+        total += nanos;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public long getTotal() {
+        return total;
+    }
+
+    /** Arithmetic mean of the times (0 if there are no operations). */
+    public long getAverage() {
+        return count == 0 ? 0L : total / count;
+    }
+
+    /** Median of the times (0 if there are no operations). */
+    public long getMedian() {
+        return median(getTimes());
+    }
+
+    /** Times of the operations in the order of their execution. */
+    public long[] getTimes() {
+        return Arrays.copyOf(times, count);
+    }
+
+    /** Median of an array (the array is sorted in place). */
+    public static long median(long[] values) {
+        if (values.length == 0) {
+            return 0L;
+        }
+        Arrays.sort(values);
+        int mid = values.length / 2;
+        return values.length % 2 == 1 ? values[mid] : (values[mid - 1] + values[mid]) / 2;
+    }
+}
+
+
+14. src/lab3/controller/ExperimentResult.java
+
+java
+package lab3.controller;
+
+/** Result of one experiment: one collection type filled with {@code size} objects. */
+public class ExperimentResult {
+
+    private final String collectionName;
+    private final int size;
+    private final OperationStats addStats;
+    private final OperationStats removeStats;
+
+    public ExperimentResult(String collectionName, int size, OperationStats addStats,
+            OperationStats removeStats) {
+        this.collectionName = collectionName;
+        this.size = size;
+        this.addStats = addStats;
+        this.removeStats = removeStats;
+    }
+
+    public String getCollectionName() {
+        return collectionName;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public OperationStats getAddStats() {
+        return addStats;
+    }
+
+    public OperationStats getRemoveStats() {
+        return removeStats;
+    }
+}
+
+
+15. src/lab3/controller/CollectionExperiment.java
+
+java
+package lab3.controller;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+
+import lab3.generator.RandomDataGenerator;
+import lab3.model.SemesterModel;
+import lab3.view.ConsoleView;
+
+/**
+ * Experiments with collections of the main class {@link SemesterModel}.
+ * <p>
+ * For every size (10, 100, 1000, 10000, 100000) an {@link ArrayList} and a {@link LinkedList}
+ * are filled with random models (operation <b>add</b>), then 10% of the elements are removed
+ * by random indices (operation <b>remove</b>). The time of every operation is written to the log:
+ * <pre>type of operation, ID (position in the list, starting from 1), time in nanoseconds</pre>
+ * Both collections are used through the {@link List} interface, so exactly the same code is
+ * measured for both of them. Ten log files are created (5 sizes x 2 collections).
+ */
+public class CollectionExperiment {
+
+    public static final int[] SIZES = {10, 100, 1000, 10000, 100000};
+    /** Share of the elements that is removed after the filling. */
+    public static final double REMOVE_SHARE = 0.10;
+
+    private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+
+    private final RandomDataGenerator generator;
+    private final Random random;
+    private final ErrMsgLog errLog;
+    private final ConsoleView view;
+
+    public CollectionExperiment(RandomDataGenerator generator, long seed, ErrMsgLog errLog,
+            ConsoleView view) {
+        this.generator = generator;
+        this.random = new Random(seed);
+        this.errLog = errLog;
+        this.view = view;
+    }
+
+    /**
+     * Runs all 10 experiments. An experiment that fails is registered in the error log
+     * and skipped, the other experiments continue.
+     */
+    public List<ExperimentResult> runAll() {
+        List<ExperimentResult> results = new ArrayList<ExperimentResult>();
+        warmUp();
+        for (int size : SIZES) {
+            addIfNotNull(results, runSafely("ArrayList", new ArrayList<SemesterModel>(), size));
+        }
+        for (int size : SIZES) {
+            addIfNotNull(results, runSafely("LinkedList", new LinkedList<SemesterModel>(), size));
+        }
+        return results;
+    }
+
+    private static void addIfNotNull(List<ExperimentResult> results, ExperimentResult result) {
+        if (result != null) {
+            results.add(result);
+        }
+    }
+
+    private ExperimentResult runSafely(String name, List<SemesterModel> list, int size) {
+        try {
+            System.gc(); // reduces the influence of the garbage collector of the previous run
+            view.showMessage("Running " + name + " with " + size + " elements...");
+            return run(name, list, size);
+        } catch (ExperimentException e) {
+            errLog.addErrWithLog(e);
+            errLog.showErrText(e);
+        } catch (IOException e) {
+            errLog.addErrWithLog(e);
+            errLog.showErrText(e);
+        } catch (OutOfMemoryError e) {
+            // not an Exception, but a real danger for 100000 objects: report it and go on
+            list.clear();
+            ExperimentException wrapped = new ExperimentException(
+                    "Not enough memory for " + name + " with " + size + " elements; "
+                            + "start the program with a larger heap, e.g. -Xmx1g");
+            errLog.addErrWithLog(wrapped);
+            errLog.showErrText(wrapped);
+        }
+        return null;
+    }
+
+    /** Short unlogged run so that the JIT compiler is warmed up before the measured runs. */
+    private void warmUp() {
+        List<SemesterModel> warm = new ArrayList<SemesterModel>();
+        for (int i = 0; i < 2000; i++) {
+            warm.add(generator.generateLightModel());
+        }
+        for (int i = 0; i < 200; i++) {
+            warm.remove(random.nextInt(warm.size()));
+        }
+        List<SemesterModel> warmLinked = new LinkedList<SemesterModel>(warm);
+        for (int i = 0; i < 200; i++) {
+            warmLinked.remove(random.nextInt(warmLinked.size()));
+        }
+    }
+
+    /**
+     * One experiment.
+     *
+     * @param name name of the collection, written to the log and used in the log file name
+     * @param list an empty collection
+     * @param size number of elements to add
+     * @throws ExperimentException if the parameters are wrong
+     * @throws IOException if the log cannot be written
+     */
+    public ExperimentResult run(String name, List<SemesterModel> list, int size)
+            throws ExperimentException, IOException {
+        if (size <= 0) {
+            throw new ExperimentException("The size of the collection must be positive: " + size);
+        }
+        if (list == null || !list.isEmpty()) {
+            throw new ExperimentException("An empty collection is required for the experiment");
+        }
+        OperationStats addStats = new OperationStats
+
+
+16. src/lab3/controller/ExperimentReport.java
+
+java
+package lab3.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+/** Builds the text reports (summary tables) of the experiments. */
+public final class ExperimentReport {
+
+    private ExperimentReport() {
+    }
+
+    /** Table with total / average / median time of add and remove for every experiment (ns). */
+    public static List<String> summaryLines(List<ExperimentResult> results) {
+        List<String> lines = new ArrayList<String>();
+        lines.add("Summary of the experiments (times in nanoseconds)");
+        lines.add(String.format("%-11s %7s | %-6s %14s %12s %12s | %-6s %12s %12s %12s",
+                "Collection", "Size", "add", "Total", "Average", "Median",
+                "remove", "Total", "Average", "Median"));
+        for (ExperimentResult r : results) {
+            OperationStats a = r.getAddStats();
+            OperationStats d = r.getRemoveStats();
+            lines.add(String.format(Locale.US, "%-11s %7d | %-6d %14d %12d %12d | %-6d %12d %12d %12d",
+                    r.getCollectionName(), r.getSize(),
+                    a.getCount(), a.getTotal(), a.getAverage(), a.getMedian(),
+                    d.getCount(), d.getTotal(), d.getAverage(), d.getMedian()));
+        }
+        lines.add("(columns after add / remove: number of operations, Total, Average, Median)");
+        return lines;
+    }
+
+    /**
+     * For every collection shows how much the average and the median time of an operation
+     * grow when the size of the collection grows 10 times (regression of performance).
+     */
+    public static List<String> regressionLines(List<ExperimentResult> results) {
+        List<String> lines = new ArrayList<String>();
+        lines.add("Growth of the time of one operation when the size grows 10 times (ratio to the previous size)");
+        lines.add(String.format("%-11s %7s | %10s %10s | %10s %10s",
+                "Collection", "Size", "add avg", "add median", "rem avg", "rem median"));
+        ExperimentResult previous = null;
+        for (ExperimentResult r : results) {
+            if (previous != null && previous.getCollectionName().equals(r.getCollectionName())) {
+                lines.add(String.format(Locale.US, "%-11s %7d | %10.2f %10.2f | %10.2f %10.2f",
+                        r.getCollectionName(), r.getSize(),
+                        ratio(r.getAddStats().getAverage(), previous.getAddStats().getAverage()),
+                        ratio(r.getAddStats().getMedian(), previous.getAddStats().getMedian()),
+                        ratio(r.getRemoveStats().getAverage(), previous.getRemoveStats().getAverage()),
+                        ratio(r.getRemoveStats().getMedian(), previous.getRemoveStats().getMedian())));
+            }
+            previous = r;
+        }
+        return lines;
+    }
+
+    private static double ratio(long value, long base) {
+        return base == 0 ? 0.0 : (double) value / base;
+    }
+}
+
+
+17. src/lab3/controller/ArrayListGrowthAnalyzer.java
+
+java
+package lab3.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Checks whether the time of add() in an {@link ArrayList} depends on the moments when the
+ * internal array grows. The growth moments are calculated for two rules:
+ * <ul>
+ * <li>the rule from the lab text: newCapacity = (oldCapacity * 3) / 2 + 1 (Java 6);</li>
+ * <li>the rule of modern JDK (7 and later): newCapacity = oldCapacity + (oldCapacity / 2).</li>
+ * </ul>
+ * In both cases the first add() allocates an array of 10 elements. The very first add() is
+ * excluded from the comparison because its time is mostly the cost of the first call.
+ */
+public class ArrayListGrowthAnalyzer {
+
+    private static final int DEFAULT_CAPACITY = 10;
+    private static final int SHOWN_POINTS = 8;
+
+    /** @return the numbers (starting from 1) of the add() calls that make the array grow */
+    public static List<Integer> growthPoints(int size, boolean labFormula) {
+        List<Integer> points = new ArrayList<Integer>();
+        int capacity = 0;
+        for (int element = 1; element <= size; element++) {
+            if (element > capacity) {
+                if (capacity == 0) {
+                    capacity = DEFAULT_CAPACITY;
+                } else if (labFormula) {
+                    capacity = (capacity * 3) / 2 + 1;
+                } else {
+                    capacity = capacity + (capacity >> 1);
+                }
+                points.add(element);
+            }
+        }
+        return points;
+    }
+
+    /**
+     * Compares the times of the add() calls that cause growth with the times of all other calls.
+     *
+     * @param addTimes times of all add() calls in the order of execution (nanoseconds)
+     * @return lines of the report
+     */
+    public static List<String> analyze(long[] addTimes) {
+        List<String> lines = new ArrayList<String>();
+        lines.add("ArrayList, " + addTimes.length + " elements: add() time at the moments of array growth");
+        if (addTimes.length < 2) {
+            lines.add("  not enough data");
+            return lines;
+        }
+        lines.add(describe(addTimes, true));
+        lines.add(describe(addTimes, false));
+        return lines;
+    }
+
+    private static String describe(long[] times, boolean labFormula) {
+        List<Integer> points = growthPoints(times.length, labFormula);
+        boolean[] growth = new boolean[times.length];
+        int growthCount = 0;
+        for (int point : points) {
+            if (point > 1) { // skip the first add(): it only creates the array
+                growth[point - 1] = true;
+                growthCount++;
+            }
+        }
+        long[] growthTimes = new long[growthCount];
+        long[] otherTimes = new long[times.length - 1 - growthCount];
+        int g = 0;
+        int o = 0;
+        for (int i = 1; i < times.length; i++) {
+            if (growth[i]) {
+                growthTimes[g++] = times[i];
+            } else {
+                otherTimes[o++] = times[i];
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(labFormula ? "  Rule (old*3)/2+1" : "  Rule old+old/2  ");
+        sb.append(": growth at add #");
+        for (int i = 1; i < points.size() && i <= SHOWN_POINTS; i++) {
+            sb.append(i > 1 ? ", " : "").append(points.get(i));
+        }
+        sb.append(points.size() - 1 > SHOWN_POINTS ? ", ..." : "");
+        sb.append(" (").append(growthCount).append(" times)");
+        if (growthCount == 0 || otherTimes.length == 0) {
+            sb.append(": not enough data");
+            return sb.toString();
+        }
+        long growthMedian = OperationStats.median(growthTimes);
+        long otherMedian = OperationStats.median(otherTimes);
+        sb.append(String.format(Locale.US,
+                "%n      growth adds: average %d ns, median %d ns; other adds: average %d ns, median %d ns;"
+                        + " median ratio = %.1f",
+                average(growthTimes), growthMedian, average(otherTimes), otherMedian,
+                otherMedian == 0 ? 0.0 : (double) growthMedian / otherMedian));
+        return sb.toString();
+    }
+
+    private static long average(long[] values) {
+        long sum = 0;
+        for (long v : values) {
+            sum += v;
+        }
+        return values.length == 0 ? 0L : sum / values.length;
+    }
+}
+
+
+18. src/lab3/controller/FeasibilityReport.java
+
+java
+package lab3.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import lab3.model.ParentMood;
+import lab3.model.Student;
+
+/** Result of the solvability check for one student. */
+public class FeasibilityReport {
+
+    private final Student student;
+    private final ParentMood target;
+    private final int gradeCount;
+    private final double currentAverage;
+    private final int freeSlots;
+    private final double maxAverage;
+    private final int fivesNeeded; // -1 if the target cannot be reached
+    private final List<String> plan = new ArrayList<String>();
+    private final List<String> alternatives = new ArrayList<String>();
+
+    public FeasibilityReport(Student student, ParentMood target, int gradeCount, double currentAverage,
+            int freeSlots, double maxAverage, int fivesNeeded) {
+        this.student = student;
+        this.target = target;
+        this.gradeCount = gradeCount;
+        this.currentAverage = currentAverage;
+        this.freeSlots = freeSlots;
+        this.maxAverage = maxAverage;
+        this.fivesNeeded = fivesNeeded;
+    }
+
+    public Student getStudent() {
+        return student;
+    }
+
+    public ParentMood getTarget() {
+        return target;
+    }
+
+    public int getGradeCount() {
+        return gradeCount;
+    }
+
+    public double getCurrentAverage() {
+        return currentAverage;
+    }
+
+    /** How many more grades the student can still receive (all subjects together). */
+    public int getFreeSlots() {
+        return freeSlots;
+    }
+
+    /** The best average that is still possible (all remaining grades are 5). */
+    public double getMaxAverage() {
+        return maxAverage;
+    }
+
+    /** Minimal number of additional grades "5" that are enough; -1 if the target is unreachable. */
+    public int getFivesNeeded() {
+        return fivesNeeded;
+    }
+
+    public boolean isSolvable() {
+        return fivesNeeded >= 0;
+    }
+
+    /** Which grades must be given so that the target is reached (empty if nothing is needed). */
+    public List<String> getPlan() {
+        return plan;
+    }
+
+    /** Admissible ways to get a solvable task if the target is unreachable. */
+    public List<String> getAlternatives() {
+        return alternatives;
+    }
+}
+
+
+19. src/lab3/controller/FeasibilityAnalyzer.java
+
+java
+package lab3.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import lab3.model.Grade;
+import lab3.model.ParentMood;
+import lab3.model.SemesterModel;
+import lab3.model.Student;
+import lab3.model.Subject;
+
+/**
+ * "Solvability" mode. The semester is in progress: the weeks 1..currentWeek are over, the grades
+ * given in them cannot be changed. The question is: <i>can the student still reach the average
+ * grade required for the given status of the parent (and so the bonus) by the end of the
+ * semester under the rules of the task</i> (at most 10 grades per subject, at most one grade per
+ * week per subject, marks 2..5)?
+ * <p>
+ * The best case is when all remaining grades are 5. If even that is not enough, the task is
+ * unsolvable and the analyzer proposes admissible variants (a lower status, a longer semester).
+ * Physically impossible variants (more than 10 grades, a grade for a week that is over, a mark
+ * above 5) are never proposed.
+ */
+public class FeasibilityAnalyzer {
+
+    /** The limit of the search of the number of extra weeks. */
+    private static final int MAX_EXTRA_WEEKS = 20;
+
+    /**
+     * Checks all students of the model.
+     *
+     * @param currentWeek number of the last finished week (0..weeks)
+     * @param target      JOYFUL or SATISFIED
+     */
+    public List<FeasibilityReport> analyze(SemesterModel model, int currentWeek, ParentMood target) {
+        if (currentWeek < 0 || currentWeek > model.getWeeks()) {
+            throw new IllegalArgumentException("The current week must be in range 0.."
+                    + model.getWeeks() + ": " + currentWeek);
+        }
+        double threshold = thresholdOf(target);
+        int remainingWeeks = model.getWeeks() - currentWeek;
+        List<Subject> subjects = model.getSubjects();
+
+        List<FeasibilityReport> reports = new ArrayList<FeasibilityReport>();
+        for (Student student : model.getStudents()) {
+            reports.add(analyzeStudent(student, subjects, currentWeek, remainingWeeks, target, threshold));
+        }
+        return reports;
+    }
+
+    private FeasibilityReport analyzeStudent(Student student, List<Subject> subjects, int currentWeek,
+            int remainingWeeks, ParentMood target, double threshold) {
+        int count = 0;
+        int sum = 0;
+        for (Subject subject : subjects) {
+            for (Grade g : student.getGrades(subject)) {
+                sum += g.getValue();
+                count++;
+            }
+        }
+        int free = freeSlots(student, subjects, remainingWeeks);
+        double maxAverage = (count + free) == 0 ? 0.0 : (double) (sum + Grade.MAX_VALUE * free) / (count + free);
+        int needed = neededFives(sum, count, free, threshold);
+
+        FeasibilityReport report = new FeasibilityReport(student, target, count,
+                count == 0 ? 0.0 : (double) sum / count, free, maxAverage, needed);
+
+        if (needed > 0) {
+            buildPlan(report, student, subjects, currentWeek, remainingWeeks, needed);
+        }
+        if (needed < 0) {
+            buildAlternatives(report, student, subjects, remainingWeeks, sum, count, target);
+        }
+        return report;
+    }
+
+    /** Number of grades the student can still get: min(10 - already received, weeks left) per subject. */
+    private static int freeSlots(Student student, List<Subject> subjects, int remainingWeeks) {
+        int free = 0;
+        for (Subject subject : subjects) {
+            free += Math.min(Student.MAX_GRADES_PER_SUBJECT - student.getGradeCount(subject), remainingWeeks);
+        }
+        return free;
+    }
+
+    /**
+     * The minimal n (0..free) such that the average (sum + 5n) / (count + n) reaches the threshold,
+     * or -1 if there is no such n. The same comparison as in {@link ParentMood#forAverage(double)}.
+     */
+    private static int neededFives(int sum, int count, int free, double threshold) {
+        for (int n = 0; n <= free; n++) {
+            if (count + n > 0 && (double) (sum + Grade.MAX_VALUE * n) / (count + n) >= threshold) {
+                return n;
+            }
+        }
+        return -1;
+    }
+
+    private static double thresholdOf(ParentMood target) {
+        switch (target) {
+            case JOYFUL:
+                return ParentMood.JOYFUL_FROM;
+            case SATISFIED:
+                return ParentMood.SATISFIED_FROM;
+            default:
+                throw new IllegalArgumentException("The target must be JOYFUL or SATISFIED: " + target);
+        }
+    }
+
+    /** Distributes the needed grades "5" over the subjects where the student has most free slots. */
+    private void buildPlan(FeasibilityReport report, Student student, List<Subject> subjects,
+            int currentWeek, int remainingWeeks, int needed) {
+        int[] room = new int[subjects.size()];
+        int[] given = new int[subjects.size()];
+        for (int i = 0; i < room.length; i++) {
+            room[i] = Math.min(Student.MAX_GRADES_PER_SUBJECT - student.getGradeCount(s
+
+
+20. src/lab3/controller/SemesterController.java
+
+java
+package lab3.controller;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import lab3.model.Gender;
+import lab3.model.Grade;
+import lab3.model.Parent;
+import lab3.model.SemesterModel;
+import lab3.model.Student;
+import lab3.model.Subject;
+import lab3.model.Teacher;
+import lab3.view.ConsoleView;
+
+/**
+ * Controller: builds the model, runs the semester (teachers give grades week by week),
+ * asks the model to settle the bonuses and tells the view what to show.
+ */
+public class SemesterController {
+
+    /** Number of weeks in the semester (must be >= 10 so that 10 grades fit "one per week"). */
+    public static final int WEEKS = 14;
+    /** Probability that a teacher grades a particular student in a particular week. */
+    public static final double GRADE_PROBABILITY = 0.8;
+
+    private static final String[] SUBJECT_TITLES = {
+        "Mathematics", "Physics", "Programming", "History", "English"
+    };
+    private static final String[] TEACHER_NAMES = {
+        "Ivanov A.P.", "Smirnova E.V.", "Kuznetsov D.S.", "Popova N.A.", "Sokolov M.I."
+    };
+    private static final String[] STUDENT_NAMES = {
+        "Alexey Volkov", "Maria Orlova", "Dmitry Belov", "Anna Kotova", "Sergey Lebedev",
+        "Olga Morozova", "Pavel Zaitsev", "Elena Fedorova", "Nikita Egorov", "Irina Pavlova"
+    };
+    private static final String[] PARENT_NAMES = {
+        "Igor Volkov", "Svetlana Orlova", "Andrey Belov", "Tatiana Kotova", "Viktor Lebedev",
+        "Natalia Morozova", "Oleg Zaitsev", "Galina Fedorova", "Boris Egorov", "Lyudmila Pavlova"
+    };
+
+    private final SemesterModel model;
+    private final ConsoleView view;
+    private final Random random;
+    /** Talent of every student in the demo (0..1); used only to generate plausible marks. */
+    private final Map<Student, Double> talent = new HashMap<Student, Double>();
+
+    public SemesterController(SemesterModel model, ConsoleView view, long seed) {
+        this.model = model;
+        this.view = view;
+        this.random = new Random(seed);
+    }
+
+    /** Runs the whole demonstration. */
+    public void run() {
+        populateModel();
+        view.showParticipants(model);
+
+        view.showTitle("SEMESTER: " + model.getWeeks() + " weeks, each teacher may give a student"
+                + " at most " + Student.MAX_GRADES_PER_SUBJECT + " grades, at most one per week");
+        runSemester();
+
+        model.settleBonuses();
+
+        view.showJournal(model);
+        view.showAverageTable(model);
+        view.showResults(model);
+        view.showTotals(model);
+    }
+
+    /** Creates 5 teachers (one subject each), 10 students and a parent for each of them. */
+    private void populateModel() {
+        for (int i = 0; i < SUBJECT_TITLES.length; i++) {
+            Subject subject = new Subject(SUBJECT_TITLES[i]);
+            Gender gender = i % 2 == 0 ? Gender.MALE : Gender.FEMALE;
+            model.addTeacher(new Teacher(TEACHER_NAMES[i], 35 + i * 4, gender, subject));
+        }
+        for (int i = 0; i < STUDENT_NAMES.length; i++) {
+            Gender gender = i % 2 == 0 ? Gender.MALE : Gender.FEMALE;
+            Student student = new Student(STUDENT_NAMES[i], 18 + i % 3, gender);
+            Parent parent = new Parent(PARENT_NAMES[i], 42 + i, i % 2 == 0 ? Gender.MALE : Gender.FEMALE);
+            parent.addChild(student);
+            model.addStudent(student);
+            model.addParent(parent);
+            // talent is spread from weak to strong students
+            talent.put(student, (double) i / (STUDENT_NAMES.length - 1));
+        }
+    }
+
+    /** Week by week every teacher may grade every student (respecting the limits of the task). */
+    private void runSemester() {
+        for (int week = 1; week <= model.getWeeks(); week++) {
+            List<Grade> issued = new ArrayList<Grade>();
+            for (Teacher teacher : model.getTeachers()) {
+                for (Student student : model.getStudents()) {
+                    if (teacher.canGrade(student, week) && random.nextDouble() < GRADE_PROBABILITY) {
+                        issued.add(teacher.grade(student, week, generateMark(student)));
+                    }
+                }
+            }
+            view.showWeek(week, issued);
+        }
+    }
+
+    /** Generates a mark 2..5 that depends on the talent of the student. */
+    private int generateMark(Student student) {
+        double expected = 3.2 + 2.0 * talent.get(student);
+        long mark = Math.round(expected + random.nextGaussian() * 0.6);
+        return (int) Math.max(Grade.MIN_VALUE, Math.min(Grade.MAX_VALUE, mark));
+    }
+}
+
+
+21. src/lab3/controller/AppController.java
+
+java
+package lab3.controller;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+import lab3.generator.RandomDataGenerator;
+import lab3.model.ParentMood;
+import lab3.model.SemesterModel;
+import lab3.model.Student;
+import lab3.model.Teacher;
+import lab3.view.ConsoleView;
+
+/**
+ * Main controller of Lab 3: shows the menu and starts the Lab 2 demonstration, the collection
+ * experiments, the solvability mode and the exception handling demonstration.
+ * All errors are registered in the common {@link ErrMsgLog}.
+ */
+public class AppController {
+
+    public static final long SEED = 2026L;
+    /** The week of the semester that is already over in the solvability mode. */
+    public static final int FEASIBILITY_WEEK = 9;
+
+    private final ConsoleView view;
+    private final ErrMsgLog errLog;
+    private final RandomDataGenerator generator;
+    private final FeasibilityAnalyzer analyzer = new FeasibilityAnalyzer();
+
+    public AppController(ConsoleView view, ErrMsgLog errLog, long seed) {
+        this.view = view;
+        this.errLog = errLog;
+        this.generator = new RandomDataGenerator(seed);
+    }
+
+    /** Menu loop. Finishes on "0" or at the end of the input. */
+    public void run(Scanner scanner) {
+        boolean running = true;
+        while (running) {
+            view.showMenu();
+            if (!scanner.hasNextLine()) {
+                break;
+            }
+            String line = scanner.nextLine();
+            try {
+                running = execute(parseChoice(line));
+            } catch (RuntimeException e) {
+                errLog.addErrWithLog(e); // an unexpected error: register it here
+                errLog.showErrText(e);
+            } catch (Exception e) {
+                errLog.showErrText(e);   // already registered by makeErr()
+            }
+        }
+        view.showMessage("");
+        view.showMessage("Errors registered during the work: " + errLog.getErrCount());
+    }
+
+    /** Converts the input to the number of the menu item. */
+    private int parseChoice(String line) throws Exception {
+        try {
+            return Integer.parseInt(line.trim());
+        } catch (NumberFormatException e) {
+            // registered in the error list and raised to the upper level
+            throw errLog.makeErr(new Exception("Invalid number of the menu item: \"" + line.trim() + "\""));
+        }
+    }
+
+    /** @return false if the program must finish */
+    private boolean execute(int choice) throws Exception {
+        switch (choice) {
+            case 1:
+                runLab2Demo();
+                return true;
+            case 2:
+                runExperiments();
+                return true;
+            case 3:
+                runFeasibilityMode();
+                return true;
+            case 4:
+                demonstrateExceptions();
+                return true;
+            case 0:
+                return false;
+            default:
+                throw errLog.makeErr(new Exception("There is no menu item " + choice));
+        }
+    }
+
+    // ------------------------------------------------------------------ 1. Lab 2
+
+    private void runLab2Demo() {
+        SemesterModel model = new SemesterModel(SemesterController.WEEKS);
+        new SemesterController(model, view, SEED).run();
+    }
+
+    // ------------------------------------------------------------------ 2. experiments
+
+    private void runExperiments() {
+        view.showTitle("COLLECTION EXPERIMENTS: ArrayList and LinkedList of SemesterModel objects");
+        CollectionExperiment experiment = new CollectionExperiment(generator, SEED, errLog, view);
+        List<ExperimentResult> results = experiment.runAll();
+
+        List<String> report = new ArrayList<String>(ExperimentReport.summaryLines(results));
+        report.add("");
+        report.addAll(ExperimentReport.regressionLines(results));
+        for (ExperimentResult r : results) {
+            if ("ArrayList".equals(r.getCollectionName()) && r.getSize() >= 100) {
+                report.add("");
+                report.addAll(ArrayListGrowthAnalyzer.analyze(r.getAddStats().getTimes()));
+            }
+        }
+        view.showTitle("RESULTS (the 10 logs are in the folder \"" + ErrMsgLog.LOG_DIR + "\")");
+        view.showLines(report);
+        saveReport(report);
+    }
+
+    /** Saves the report next to the logs of the experiments. */
+    private void saveReport(List<String> report) {
+        try {
+            errLog.startOperationLog("summary.txt");
+            for (String line : report) {
+                errLog.writeOperationLine(line);
+            }
+        } catch (IOException e) {
+            errLog.addErrWithLog(e);
+            errLog.showErrText(e);
+        } finally {
+            try {
+                errLog.finishOperationLog();
+            } catch (IOException e) {
+                errLog.addErrWithLog(e);
+                errLog.showErrText(e);
+            }
+        }
+    }
+
+    // ---------------------------------------
+
+
+22. src/lab3/view/ConsoleView.java
+
+java
+package lab3.view;
+
+import java.util.List;
+import java.util.Locale;
+
+import lab3.controller.FeasibilityReport;
+import lab3.model.Grade;
+import lab3.model.ParentMood;
+import lab3.model.Parent;
+import lab3.model.SemesterModel;
+import lab3.model.Student;
+import lab3.model.Subject;
+import lab3.model.Teacher;
+
+/** View: prints everything to the console. Contains no business logic. */
+public class ConsoleView {
+
+    private static final String LINE =
+            "------------------------------------------------------------------------------------------";
+
+    public void showTitle(String title) {
+        System.out.println();
+        System.out.println("==========================================================================================");
+        System.out.println(title);
+        System.out.println("==========================================================================================");
+    }
+
+    public void showMessage(String message) {
+        System.out.println(message);
+    }
+
+    /** Prints the teachers (with their subjects) and the students (with their parents). */
+    public void showParticipants(SemesterModel model) {
+        showTitle("PARTICIPANTS OF THE MODEL");
+        System.out.println("Teachers (" + model.getTeachers().size() + "):");
+        for (Teacher t : model.getTeachers()) {
+            System.out.println("  " + t);
+        }
+        System.out.println("Students (" + model.getStudents().size() + "):");
+        for (Student s : model.getStudents()) {
+            String parent = s.getParent() == null ? "-" : s.getParent().getName();
+            System.out.println("  " + s.getName() + ", age " + s.getAge() + ", " + s.getGender()
+                    + " (parent: " + parent + ")");
+        }
+    }
+
+    /** Prints the grades issued during one week. */
+    public void showWeek(int week, List<Grade> issued) {
+        System.out.printf("Week %2d: %3d grade(s) issued%n", week, issued.size());
+    }
+
+    /** Prints the grade journal: all grades of every student, subject by subject. */
+    public void showJournal(SemesterModel model) {
+        showTitle("GRADE JOURNAL (grade@week)");
+        for (Student s : model.getStudents()) {
+            System.out.println(s.getName());
+            for (Subject subject : model.getSubjects()) {
+                StringBuilder sb = new StringBuilder();
+                for (Grade g : s.getGrades(subject)) {
+                    if (sb.length() > 0) {
+                        sb.append(' ');
+                    }
+                    sb.append(g.getValue()).append('@').append(g.getWeek());
+                }
+                System.out.printf("   %-18s [%2d] %s%n", subject.getTitle(), s.getGradeCount(subject), sb);
+            }
+        }
+    }
+
+    /** Prints the table of average grades per subject and overall. */
+    public void showAverageTable(SemesterModel model) {
+        showTitle("AVERAGE GRADES");
+        StringBuilder header = new StringBuilder(String.format("%-22s", "Student"));
+        for (Subject subject : model.getSubjects()) {
+            header.append(String.format(" %-12s", shorten(subject.getTitle(), 12)));
+        }
+        header.append(String.format(" %-8s", "Overall"));
+        System.out.println(header);
+        System.out.println(LINE);
+        for (Student s : model.getStudents()) {
+            StringBuilder row = new StringBuilder(String.format("%-22s", s.getName()));
+            for (Subject subject : model.getSubjects()) {
+                row.append(String.format(Locale.US, " %-12.2f", s.getAverageGrade(subject)));
+            }
+            row.append(String.format(Locale.US, " %-8.2f", s.getAverageGrade()));
+            System.out.println(row);
+        }
+    }
+
+    /** Prints the final descriptions of everybody using the overridden toString() methods. */
+    public void showResults(SemesterModel model) {
+        showTitle("RESULTS OF THE SEMESTER");
+        System.out.println("Teachers:");
+        for (Teacher t : model.getTeachers()) {
+            System.out.println("  " + t);
+        }
+        System.out.println("Students:");
+        for (Student s : model.getStudents()) {
+            System.out.println("  " + s);
+        }
+        System.out.println("Parents:");
+        for (Parent p : model.getParents()) {
+            System.out.println("  " + p);
+        }
+    }
+
+    /** Prints the total amount of bonuses. */
+    public void showTotals(SemesterModel model) {
+        int total = 0;
+        int gloomy = 0;
+        int satisfied = 0;
+        int joyful = 0;
+        for (Parent p : model.getParents()) {
+            total += p.getTotalBonusPaid();
+            switch (p.getMood()) {
+                case GLOOMY:
+                    gloomy++;
+                    break;
+                case SATISFIED:
+                    satisfied++;
+                    break;
+                case JOYFUL:
+                    joyful++;
+                    break;
+                default:
+                    break;
+            }
+        }
+        System.ou
+
+
+23. src/lab3/Main.java
+
+java
+package lab3;
+
+import java.io.IOException;
+import java.util.Scanner;
+
+import lab3.controller.AppController;
+import lab3.controller.ErrMsgLog;
+import lab3.view.ConsoleView;
+
+/** Entry point of laboratory work No. 3: exceptions and collections (extends Lab 2). */
+public class Main {
+
+    public static void main(String[] args) {
+        ErrMsgLog errLog;
+        try {
+            errLog = new ErrMsgLog();
+        } catch (IOException e) {
+            System.err.println("Cannot start the logging: " + e.getMessage());
+            return;
+        }
+        Scanner scanner = new Scanner(System.in);
+        try {
+            new AppController(new ConsoleView(), errLog, AppController.SEED).run(scanner);
+        } finally {
+            scanner.close();
+            errLog.close();
+        }
+    }
+}
+
+
+24. src/lab3/controller/logging.properties
+
+Create with File > New > File inside package lab3.controller (name: logging.properties).
+
+properties
+# Configuration of the error log. Must lie in the same package as ErrMsgLog.
+.level=FINE
+java.util.logging.ConsoleHandler.level = FINE
+java.util.logging.ConsoleHandler.formatter = java.util.logging.SimpleFormatter
+# Only the file handler is used, so errors are written to the file without being shown in the console
+handlers = java.util.logging.FileHandler
+# Folder and file of the log (the folder is created by ErrMsgLog). With several files the name is err_log.txt.n
+java.util.logging.FileHandler.pattern = logs/err_log.txt
+# Maximum size of one log file in bytes
+java.util.logging.FileHandler.limit = 100000
+# Number of log files
+java.util.logging.FileHandler.count = 3
+# Append to the end of the log file
+java.util.logging.FileHandler.append = true
+java.util.logging.FileHandler.formatter = java.util.logging.SimpleFormatter
+# Format: 1 - date, 4 - level, 5 - message
+java.util.logging.SimpleFormatter.format = %1$`tF %1`$tT %4$`-5s %5`$s %n
