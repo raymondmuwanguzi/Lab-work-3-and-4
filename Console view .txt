@@ -1,0 +1,193 @@
+package lab3.view;
+
+import java.util.List;
+import java.util.Locale;
+
+import lab3.controller.FeasibilityReport;
+import lab3.model.Grade;
+import lab3.model.ParentMood;
+import lab3.model.Parent;
+import lab3.model.SemesterModel;
+import lab3.model.Student;
+import lab3.model.Subject;
+import lab3.model.Teacher;
+
+/** View: prints everything to the console. Contains no business logic. */
+public class ConsoleView {
+
+private static final String LINE =
+"------------------------------------------------------------------------------------------";
+
+public void showTitle(String title) {
+System.out.println();
+System.out.println("");
+System.out.println(title);
+System.out.println("");
+}
+
+public void showMessage(String message) {
+System.out.println(message);
+}
+
+/** Prints the teachers (with their subjects) and the students (with their parents). */
+public void showParticipants(SemesterModel model) {
+showTitle("PARTICIPANTS OF THE MODEL");
+System.out.println("Teachers (" + model.getTeachers().size() + "):");
+for (Teacher t : model.getTeachers()) {
+System.out.println(" " + t);
+}
+System.out.println("Students (" + model.getStudents().size() + "):");
+for (Student s : model.getStudents()) {
+String parent = s.getParent() == null ? "-" : s.getParent().getName();
+System.out.println(" " + s.getName() + ", age " + s.getAge() + ", " + s.getGender()
++ " (parent: " + parent + ")");
+}
+}
+
+/** Prints the grades issued during one week. */
+public void showWeek(int week, List<Grade> issued) {
+System.out.printf("Week %2d: %3d grade(s) issued%n", week, issued.size());
+}
+
+/** Prints the grade journal: all grades of every student, subject by subject. */
+public void showJournal(SemesterModel model) {
+showTitle("GRADE JOURNAL (grade@week)");
+for (Student s : model.getStudents()) {
+System.out.println(s.getName());
+for (Subject subject : model.getSubjects()) {
+StringBuilder sb = new StringBuilder();
+for (Grade g : s.getGrades(subject)) {
+if (sb.length() > 0) {
+sb.append(' ');
+}
+sb.append(g.getValue()).append('@').append(g.getWeek());
+}
+System.out.printf(" %-18s [%2d] %s%n", subject.getTitle(), s.getGradeCount(subject), sb);
+}
+}
+}
+
+/** Prints the table of average grades per subject and overall. */
+public void showAverageTable(SemesterModel model) {
+showTitle("AVERAGE GRADES");
+StringBuilder header = new StringBuilder(String.format("%-22s", "Student"));
+for (Subject subject : model.getSubjects()) {
+header.append(String.format(" %-12s", shorten(subject.getTitle(), 12)));
+}
+header.append(String.format(" %-8s", "Overall"));
+System.out.println(header);
+System.out.println(LINE);
+for (Student s : model.getStudents()) {
+StringBuilder row = new StringBuilder(String.format("%-22s", s.getName()));
+for (Subject subject : model.getSubjects()) {
+row.append(String.format(Locale.US, " %-12.2f", s.getAverageGrade(subject)));
+}
+row.append(String.format(Locale.US, " %-8.2f", s.getAverageGrade()));
+System.out.println(row);
+}
+}
+
+/** Prints the final descriptions of everybody using the overridden toString() methods. */
+public void showResults(SemesterModel model) {
+showTitle("RESULTS OF THE SEMESTER");
+System.out.println("Teachers:");
+for (Teacher t : model.getTeachers()) {
+System.out.println(" " + t);
+}
+System.out.println("Students:");
+for (Student s : model.getStudents()) {
+System.out.println(" " + s);
+}
+System.out.println("Parents:");
+for (Parent p : model.getParents()) {
+System.out.println(" " + p);
+}
+}
+
+/** Prints the total amount of bonuses. */
+public void showTotals(SemesterModel model) {
+int total = 0;
+int gloomy = 0;
+int satisfied = 0;
+int joyful = 0;
+for (Parent p : model.getParents()) {
+total += p.getTotalBonusPaid();
+switch (p.getMood()) {
+case GLOOMY:
+gloomy++;
+break;
+case SATISFIED:
+satisfied++;
+break;
+case JOYFUL:
+joyful++;
+break;
+default:
+break;
+}
+}
+System.out.println(LINE);
+System.out.println("Parents by status: gloomy = " + gloomy + ", satisfied = " + satisfied
++ ", joyful = " + joyful);
+System.out.println("Total bonuses paid: " + total + " thousand");
+}
+
+// ------------------------------------------------------------------ Lab 3
+
+/** Prints the main menu. */
+public void showMenu() {
+showTitle("MENU");
+System.out.println("1 - Lab 2: semester model demonstration");
+System.out.println("2 - Lab 3: collection experiments (10 logs) and ArrayList growth analysis");
+System.out.println("3 - Lab 3: solvability mode (can the students still reach the target?)");
+System.out.println("4 - Lab 3: exception handling demonstration");
+System.out.println("0 - Exit");
+System.out.print("Your choice > ");
+}
+
+/** Prints several lines of text (reports). */
+public void showLines(List<String> lines) {
+for (String line : lines) {
+System.out.println(line);
+}
+}
+
+/** Prints the result of the solvability check of the whole group. */
+public void showFeasibility(SemesterModel model, int currentWeek, ParentMood target,
+List<FeasibilityReport> reports) {
+showTitle("SOLVABILITY MODE: target status "" + target + "" (average >= "
++ (target == ParentMood.JOYFUL ? ParentMood.JOYFUL_FROM : ParentMood.SATISFIED_FROM)
++ "), week " + currentWeek + " of " + model.getWeeks() + " is over");
+int solvable = 0;
+for (FeasibilityReport r : reports) {
+System.out.println(r.getStudent().getName() + ": " + r.getGradeCount() + " grade(s), average "
++ String.format(Locale.US, "%.2f", r.getCurrentAverage()) + ", free slots "
++ r.getFreeSlots() + ", best possible average "
++ String.format(Locale.US, "%.2f", r.getMaxAverage()));
+if (r.isSolvable()) {
+solvable++;
+if (r.getFivesNeeded() == 0) {
+System.out.println(" SOLVABLE: the target is already reached; the next grades must not"
++ " lower the average");
+} else {
+System.out.println(" SOLVABLE: at least " + r.getFivesNeeded()
++ " more grade(s) of 5 are needed:");
+for (String step : r.getPlan()) {
+System.out.println(" - " + step);
+}
+}
+} else {
+System.out.println(" UNSOLVABLE under the current rules. Admissible variants:");
+for (String variant : r.getAlternatives()) {
+System.out.println(" - " + variant);
+}
+}
+}
+System.out.println(LINE);
+System.out.println("Solvable for " + solvable + " of " + reports.size() + " student(s)");
+}
+
+private static String shorten(String text, int max) {
+return text.length() <= max ? text : text.substring(0, max);
+}
+}

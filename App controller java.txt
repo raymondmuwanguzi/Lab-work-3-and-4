@@ -1,0 +1,203 @@
+package lab3.controller;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+import lab3.generator.RandomDataGenerator;
+import lab3.model.ParentMood;
+import lab3.model.SemesterModel;
+import lab3.model.Student;
+import lab3.model.Teacher;
+import lab3.view.ConsoleView;
+
+/**
+• Main controller of Lab 3: shows the menu and starts the Lab 2 demonstration, the collection
+• experiments, the solvability mode and the exception handling demonstration.
+• All errors are registered in the common {@link ErrMsgLog}.
+*/
+public class AppController {
+
+public static final long SEED = 2026L;
+/** The week of the semester that is already over in the solvability mode. */
+public static final int FEASIBILITY_WEEK = 9;
+
+private final ConsoleView view;
+private final ErrMsgLog errLog;
+private final RandomDataGenerator generator;
+private final FeasibilityAnalyzer analyzer = new FeasibilityAnalyzer();
+
+public AppController(ConsoleView view, ErrMsgLog errLog, long seed) {
+this.view = view;
+this.errLog = errLog;
+this.generator = new RandomDataGenerator(seed);
+}
+
+/** Menu loop. Finishes on "0" or at the end of the input. */
+public void run(Scanner scanner) {
+boolean running = true;
+while (running) {
+view.showMenu();
+if (!scanner.hasNextLine()) {
+break;
+}
+String line = scanner.nextLine();
+try {
+running = execute(parseChoice(line));
+} catch (RuntimeException e) {
+errLog.addErrWithLog(e); // an unexpected error: register it here
+errLog.showErrText(e);
+} catch (Exception e) {
+errLog.showErrText(e); // already registered by makeErr()
+}
+}
+view.showMessage("");
+view.showMessage("Errors registered during the work: " + errLog.getErrCount());
+}
+
+/** Converts the input to the number of the menu item. */
+private int parseChoice(String line) throws Exception {
+try {
+return Integer.parseInt(line.trim());
+} catch (NumberFormatException e) {
+// registered in the error list and raised to the upper level
+throw errLog.makeErr(new Exception("Invalid number of the menu item: "" + line.trim() + """));
+}
+}
+
+/** @return false if the program must finish */
+private boolean execute(int choice) throws Exception {
+switch (choice) {
+case 1:
+runLab2Demo();
+return true;
+case 2:
+runExperiments();
+return true;
+case 3:
+runFeasibilityMode();
+return true;
+case 4:
+demonstrateExceptions();
+return true;
+case 0:
+return false;
+default:
+throw errLog.makeErr(new Exception("There is no menu item " + choice));
+}
+}
+
+// ------------------------------------------------------------------ 1. Lab 2
+
+private void runLab2Demo() {
+SemesterModel model = new SemesterModel(SemesterController.WEEKS);
+new SemesterController(model, view, SEED).run();
+}
+
+// ------------------------------------------------------------------ 2. experiments
+
+private void runExperiments() {
+view.showTitle("COLLECTION EXPERIMENTS: ArrayList and LinkedList of SemesterModel objects");
+CollectionExperiment experiment = new CollectionExperiment(generator, SEED, errLog, view);
+List<ExperimentResult> results = experiment.runAll();
+
+List<String> report = new ArrayList<String>(ExperimentReport.summaryLines(results));
+report.add("");
+report.addAll(ExperimentReport.regressionLines(results));
+for (ExperimentResult r : results) {
+if ("ArrayList".equals(r.getCollectionName()) && r.getSize() >= 100) {
+report.add("");
+report.addAll(ArrayListGrowthAnalyzer.analyze(r.getAddStats().getTimes()));
+}
+}
+view.showTitle("RESULTS (the 10 logs are in the folder "" + ErrMsgLog.LOG_DIR + "")");
+view.showLines(report);
+saveReport(report);
+}
+
+/** Saves the report next to the logs of the experiments. */
+private void saveReport(List<String> report) {
+try {
+errLog.startOperationLog("summary.txt");
+for (String line : report) {
+errLog.writeOperationLine(line);
+}
+} catch (IOException e) {
+errLog.addErrWithLog(e);
+errLog.showErrText(e);
+} finally {
+try {
+errLog.finishOperationLog();
+} catch (IOException e) {
+errLog.addErrWithLog(e);
+errLog.showErrText(e);
+}
+}
+}
+
+// ------------------------------------------------------------------ 3. solvability
+
+private void runFeasibilityMode() {
+SemesterModel model = generator.generateModel(SemesterController.WEEKS, 5, 10);
+generator.generateGrades(model, 1, FEASIBILITY_WEEK, SemesterController.GRADE_PROBABILITY);
+ParentMood target = ParentMood.JOYFUL;
+view.showFeasibility(model, FEASIBILITY_WEEK, target,
+analyzer.analyze(model, FEASIBILITY_WEEK, target));
+}
+
+// ------------------------------------------------------------------ 4. exceptions
+
+private void report(String what, Exception e) {
+errLog.addErrWithLog(e);
+view.showMessage(" caught " + what + ": " + e.getMessage());
+}
+
+private void demonstrateExceptions() {
+view.showTitle("EXCEPTION HANDLING DEMONSTRATION");
+
+view.showMessage("1. System exceptions: multiple catch and finally");
+try {
+int[] marks = new int[3];
+int zero = marks.length - 3;
+view.showMessage(" result: " + 10 / zero); // ArithmeticException
+view.showMessage(" not printed: " + marks[5]);
+} catch (ArithmeticException e) {
+report("ArithmeticException", e);
+} catch (ArrayIndexOutOfBoundsException e) {
+report("ArrayIndexOutOfBoundsException", e);
+} finally {
+view.showMessage(" finally is executed in any case");
+}
+
+view.showMessage("2. Rules of Lab 2 are protected by exceptions (max 10 grades per subject)");
+SemesterModel model = generator.generateModel(SemesterController.WEEKS, 1, 1);
+Teacher teacher = model.getTeachers().get(0);
+Student student = model.getStudents().get(0);
+try {
+for (int week = 1; week <= Student.MAX_GRADES_PER_SUBJECT + 1; week++) {
+teacher.grade(student, week, 5);
+}
+} catch (IllegalStateException e) {
+report("IllegalStateException", e);
+}
+
+view.showMessage("3. An invalid mark");
+try {
+teacher.grade(student, 12, 7);
+} catch (IllegalArgumentException e) {
+report("IllegalArgumentException", e);
+}
+
+view.showMessage("4. A method with throws: wrong parameters of an experiment");
+CollectionExperiment experiment = new CollectionExperiment(generator, SEED, errLog, view);
+try {
+experiment.run("ArrayList", new ArrayList<SemesterModel>(), -5);
+} catch (ExperimentException e) {
+report("ExperimentException", e);
+} catch (IOException e) {
+report("IOException", e);
+}
+view.showMessage("Errors registered so far: " + errLog.getErrCount());
+}
+}

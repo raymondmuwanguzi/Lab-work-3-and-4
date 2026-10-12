@@ -1,0 +1,183 @@
+package lab3.generator;
+
+import java.util.List;
+import java.util.Random;
+
+import lab3.model.Gender;
+import lab3.model.Grade;
+import lab3.model.Parent;
+import lab3.model.SemesterModel;
+import lab3.model.Student;
+import lab3.model.Subject;
+import lab3.model.Teacher;
+
+/**
+• Generates random objects of the Lab 2 model.
+• <p>
+• The main class of the model is {@link SemesterModel}; it directly consists of
+• {@link Teacher}s (each with a {@link Subject}), {@link Student}s and {@link Parent}s,
+• so there is a separate generator method for every one of these classes
+• (plus {@link #generateGrades(SemesterModel, int, int, double)} for the grades).
+*/
+public class RandomDataGenerator {
+
+private static final String[] SUBJECT_TITLES = {
+"Mathematics", "Physics", "Programming", "History", "English"
+};
+/** Subjects are immutable, so the same instances are shared by all generated models. */
+private static final Subject[] SUBJECTS = createSubjects();
+
+private static final String[] MALE_NAMES = {
+"Alexey", "Dmitry", "Sergey", "Pavel", "Nikita", "Ivan", "Andrey", "Oleg", "Boris", "Viktor"
+};
+private static final String[] FEMALE_NAMES = {
+"Maria", "Anna", "Olga", "Elena", "Irina", "Tatiana", "Natalia", "Galina", "Svetlana", "Daria"
+};
+/** Men's forms of the last names; women get the ending "a". */
+private static final String[] LAST_NAMES = {
+"Volkov", "Orlov", "Belov", "Kotov", "Lebedev", "Morozov", "Zaitsev", "Fedorov", "Egorov",
+"Pavlov", "Smirnov", "Kuznetsov", "Popov", "Sokolov", "Mikhailov", "Novikov"
+};
+
+private final Random random;
+
+public RandomDataGenerator(long seed) {
+this.random = new Random(seed);
+}
+
+private static Subject[] createSubjects() {
+Subject[] result = new Subject[SUBJECT_TITLES.length];
+for (int i = 0; i < result.length; i++) {
+result[i] = new Subject(SUBJECT_TITLES[i]);
+}
+return result;
+}
+
+/** Maximum number of different subjects (and therefore teachers) a generated model can have. */
+public static int getMaxTeachers() {
+return SUBJECTS.length;
+}
+
+// ------------------------------------------------------------------ simple objects
+
+private Gender randomGender() {
+return random.nextBoolean() ? Gender.MALE : Gender.FEMALE;
+}
+
+private String randomName(Gender gender) {
+String[] firstNames = gender == Gender.MALE ? MALE_NAMES : FEMALE_NAMES;
+return firstNames[random.nextInt(firstNames.length)] + " "
++ LAST_NAMES[random.nextInt(LAST_NAMES.length)] + (gender == Gender.MALE ? "" : "a");
+}
+
+/** Random subject from the list of known subjects. */
+public Subject generateSubject() {
+return SUBJECTS[random.nextInt(SUBJECTS.length)];
+}
+
+/** Random teacher (age 30..65) who teaches the given subject. */
+public Teacher generateTeacher(Subject subject) {
+Gender gender = randomGender();
+return new Teacher(randomName(gender), 30 + random.nextInt(36), gender, subject);
+}
+
+/** Random student (age 17..23). */
+public Student generateStudent() {
+Gender gender = randomGender();
+return new Student(randomName(gender), 17 + random.nextInt(7), gender);
+}
+
+/** Random parent (age 38..60); children are attached by the caller via addChild. */
+public Parent generateParent() {
+Gender gender = randomGender();
+return new Parent(randomName(gender), 38 + random.nextInt(23), gender);
+}
+
+/** Random mark in range Grade.MIN_VALUE..Grade.MAX_VALUE depending on the talent (0..1). */
+public int generateMark(double talent) {
+double expected = 3.2 + 2.0 * talent;
+long mark = Math.round(expected + random.nextGaussian() * 0.6);
+return (int) Math.max(Grade.MIN_VALUE, Math.min(Grade.MAX_VALUE, mark));
+}
+
+// ------------------------------------------------------------------ main class
+
+/**
+* Generates the main class of the model: a semester with the given number of weeks,
+* teachers (every teacher has his own subject), students and a parent for each student.
+* No grades are issued yet.
+*
+* @throws IllegalArgumentException if the parameters do not fit the rules of the model
+*/
+public SemesterModel generateModel(int weeks, int teacherCount, int studentCount) {
+if (teacherCount < 1 || teacherCount > SUBJECTS.length) {
+throw new IllegalArgumentException("Teacher count must be in range 1.." + SUBJECTS.length
++ ": " + teacherCount);
+}
+if (studentCount < 1) {
+throw new IllegalArgumentException("Student count must be positive: " + studentCount);
+}
+SemesterModel model = new SemesterModel(weeks); // checks the number of weeks itself
+
+// teachers: random distinct subjects (partial Fisher-Yates shuffle of the subject indices)
+int[] order = new int[SUBJECTS.length];
+for (int i = 0; i < order.length; i++) {
+order[i] = i;
+}
+for (int i = 0; i < teacherCount; i++) {
+int j = i + random.nextInt(order.length - i);
+int tmp = order[i];
+order[i] = order[j];
+order[j] = tmp;
+model.addTeacher(generateTeacher(SUBJECTS[order[i]]));
+}
+for (int i = 0; i < studentCount; i++) {
+Student student = generateStudent();
+Parent parent = generateParent();
+parent.addChild(student);
+model.addStudent(student);
+model.addParent(parent);
+}
+return model;
+}
+
+/**
+* A small random model used in the collection experiments: 10..12 weeks, 2 teachers,
+* 3 students (with parents) and a couple of grades for each of them.
+*/
+public SemesterModel generateLightModel() {
+SemesterModel model = generateModel(10 + random.nextInt(3), 2, 3);
+generateGrades(model, 1, 2, 0.8);
+return model;
+}
+
+/**
+* Lets every teacher grade every student in the weeks fromWeek..toWeek (inclusive).
+* A grade is given with the given probability and only if the rules of the task allow it
+* (at most 10 grades per subject, at most one per week). Students are spread from weak
+* (first in the list) to strong (last in the list).
+*
+* @return the number of grades issued
+*/
+public int generateGrades(SemesterModel model, int fromWeek, int toWeek, double probability) {
+if (fromWeek < 1 || toWeek > model.getWeeks() || fromWeek > toWeek) {
+throw new IllegalArgumentException("Wrong weeks range: " + fromWeek + ".." + toWeek
++ " (the semester has " + model.getWeeks() + " weeks)");
+}
+List<Student> students = model.getStudents();
+int issued = 0;
+for (int week = fromWeek; week <= toWeek; week++) {
+for (Teacher teacher : model.getTeachers()) {
+for (int i = 0; i < students.size(); i++) {
+Student student = students.get(i);
+if (teacher.canGrade(student, week) && random.nextDouble() < probability) {
+double talent = students.size() == 1 ? 0.5 : (double) i / (students.size() - 1);
+teacher.grade(student, week, generateMark(talent));
+issued++;
+}
+}
+}
+}
+return issued;
+}
+}

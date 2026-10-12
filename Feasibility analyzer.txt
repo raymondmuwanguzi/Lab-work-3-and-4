@@ -1,0 +1,166 @@
+package lab3.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import lab3.model.Grade;
+import lab3.model.ParentMood;
+import lab3.model.SemesterModel;
+import lab3.model.Student;
+import lab3.model.Subject;
+
+/**
+• "Solvability" mode. The semester is in progress: the weeks 1..currentWeek are over, the grades
+• given in them cannot be changed. The question is: <i>can the student still reach the average
+• grade required for the given status of the parent (and so the bonus) by the end of the
+• semester under the rules of the task</i> (at most 10 grades per subject, at most one grade per
+• week per subject, marks 2..5)?
+• <p>
+• The best case is when all remaining grades are 5. If even that is not enough, the task is
+• unsolvable and the analyzer proposes admissible variants (a lower status, a longer semester).
+• Physically impossible variants (more than 10 grades, a grade for a week that is over, a mark
+• above 5) are never proposed.
+*/
+public class FeasibilityAnalyzer {
+
+/** The limit of the search of the number of extra weeks. */
+private static final int MAX_EXTRA_WEEKS = 20;
+
+/**
+* Checks all students of the model.
+*
+* @param currentWeek number of the last finished week (0..weeks)
+* @param target JOYFUL or SATISFIED
+*/
+public List<FeasibilityReport> analyze(SemesterModel model, int currentWeek, ParentMood target) {
+if (currentWeek < 0 || currentWeek > model.getWeeks()) {
+throw new IllegalArgumentException("The current week must be in range 0.."
++ model.getWeeks() + ": " + currentWeek);
+}
+double threshold = thresholdOf(target);
+int remainingWeeks = model.getWeeks() - currentWeek;
+List<Subject> subjects = model.getSubjects();
+
+List<FeasibilityReport> reports = new ArrayList<FeasibilityReport>();
+for (Student student : model.getStudents()) {
+reports.add(analyzeStudent(student, subjects, currentWeek, remainingWeeks, target, threshold));
+}
+return reports;
+}
+
+private FeasibilityReport analyzeStudent(Student student, List<Subject> subjects, int currentWeek,
+int remainingWeeks, ParentMood target, double threshold) {
+int count = 0;
+int sum = 0;
+for (Subject subject : subjects) {
+for (Grade g : student.getGrades(subject)) {
+sum += g.getValue();
+count++;
+}
+}
+int free = freeSlots(student, subjects, remainingWeeks);
+double maxAverage = (count + free) == 0 ? 0.0 : (double) (sum + Grade.MAX_VALUE * free) / (count + free);
+int needed = neededFives(sum, count, free, threshold);
+
+FeasibilityReport report = new FeasibilityReport(student, target, count,
+count == 0 ? 0.0 : (double) sum / count, free, maxAverage, needed);
+
+if (needed > 0) {
+buildPlan(report, student, subjects, currentWeek, remainingWeeks, needed);
+}
+if (needed < 0) {
+buildAlternatives(report, student, subjects, remainingWeeks, sum, count, target);
+}
+return report;
+}
+
+/** Number of grades the student can still get: min(10 - already received, weeks left) per subject. */
+private static int freeSlots(Student student, List<Subject> subjects, int remainingWeeks) {
+int free = 0;
+for (Subject subject : subjects) {
+free += Math.min(Student.MAX_GRADES_PER_SUBJECT - student.getGradeCount(subject), remainingWeeks);
+}
+return free;
+}
+
+/**
+* The minimal n (0..free) such that the average (sum + 5n) / (count + n) reaches the threshold,
+* or -1 if there is no such n. The same comparison as in {@link ParentMood#forAverage(double)}.
+*/
+private static int neededFives(int sum, int count, int free, double threshold) {
+for (int n = 0; n <= free; n++) {
+if (count + n > 0 && (double) (sum + Grade.MAX_VALUE * n) / (count + n) >= threshold) {
+return n;
+}
+}
+return -1;
+}
+
+private static double thresholdOf(ParentMood target) {
+switch (target) {
+case JOYFUL:
+return ParentMood.JOYFUL_FROM;
+case SATISFIED:
+return ParentMood.SATISFIED_FROM;
+default:
+throw new IllegalArgumentException("The target must be JOYFUL or SATISFIED: " + target);
+}
+}
+
+/** Distributes the needed grades "5" over the subjects where the student has most free slots. */
+private void buildPlan(FeasibilityReport report, Student student, List<Subject> subjects,
+int currentWeek, int remainingWeeks, int needed) {
+int[] room = new int[subjects.size()];
+int[] given = new int[subjects.size()];
+for (int i = 0; i < room.length; i++) {
+room[i] = Math.min(Student.MAX_GRADES_PER_SUBJECT - student.getGradeCount(subjects.get(i)),
+remainingWeeks);
+}
+for (int k = 0; k < needed; k++) {
+int best = 0;
+for (int i = 1; i < room.length; i++) {
+if (room[i] > room[best]) {
+best = i;
+}
+}
+room[best]--;
+given[best];
+}
+for (int i = 0; i < given.length; i) {
+if (given[i] > 0) {
+report.getPlan().add(String.format(Locale.US, "%s: %d grade(s) of 5 in weeks %d..%d",
+subjects.get(i).getTitle(), given[i], currentWeek + 1, currentWeek + given[i]));
+}
+}
+}
+
+private void buildAlternatives(FeasibilityReport report, Student student, List<Subject> subjects,
+int remainingWeeks, int sum, int count, ParentMood target) {
+// 1. a lower status
+if (target == ParentMood.JOYFUL) {
+int n = neededFives(sum, count, report.getFreeSlots(), ParentMood.SATISFIED_FROM);
+if (n >= 0) {
+report.getAlternatives().add("Aim at the status SATISFIED (average >= "
++ ParentMood.SATISFIED_FROM + ", bonus " + ParentMood.SATISFIED.getBonus()
++ " thousand): " + (n == 0 ? "already reached" : n + " more grade(s) of 5 are enough"));
+} else {
+report.getAlternatives().add("The status SATISFIED (average >= "
++ ParentMood.SATISFIED_FROM + ") is also unreachable");
+}
+}
+// 2. a longer semester
+double threshold = thresholdOf(target);
+for (int extra = 1; extra <= MAX_EXTRA_WEEKS; extra++) {
+int free = freeSlots(student, subjects, remainingWeeks + extra);
+int n = neededFives(sum, count, free, threshold);
+if (n >= 0) {
+report.getAlternatives().add("Extend the semester by " + extra + " week(s): then "
++ n + " more grade(s) of 5 are enough");
+return;
+}
+}
+report.getAlternatives().add("A longer semester does not help: the limit of "
++ Student.MAX_GRADES_PER_SUBJECT + " grades per subject is the obstacle");
+}
+}

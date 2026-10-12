@@ -1,0 +1,170 @@
+package lab3.controller;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+
+import lab3.generator.RandomDataGenerator;
+import lab3.model.SemesterModel;
+import lab3.view.ConsoleView;
+
+/**
+• Experiments with collections of the main class {@link SemesterModel}.
+• <p>
+• For every size (10, 100, 1000, 10000, 100000) an {@link ArrayList} and a {@link LinkedList}
+• are filled with random models (operation <b>add</b>), then 10% of the elements are removed
+• by random indices (operation <b>remove</b>). The time of every operation is written to the log:
+• <pre>type of operation, ID (position in the list, starting from 1), time in nanoseconds</pre>
+• Both collections are used through the {@link List} interface, so exactly the same code is
+• measured for both of them. Ten log files are created (5 sizes x 2 collections).
+*/
+public class CollectionExperiment {
+
+public static final int[] SIZES = {10, 100, 1000, 10000, 100000};
+/** Share of the elements that is removed after the filling. */
+public static final double REMOVE_SHARE = 0.10;
+
+private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+
+private final RandomDataGenerator generator;
+private final Random random;
+private final ErrMsgLog errLog;
+private final ConsoleView view;
+
+public CollectionExperiment(RandomDataGenerator generator, long seed, ErrMsgLog errLog,
+ConsoleView view) {
+this.generator = generator;
+this.random = new Random(seed);
+this.errLog = errLog;
+this.view = view;
+}
+
+/**
+* Runs all 10 experiments. An experiment that fails is registered in the error log
+* and skipped, the other experiments continue.
+*/
+public List<ExperimentResult> runAll() {
+List<ExperimentResult> results = new ArrayList<ExperimentResult>();
+warmUp();
+for (int size : SIZES) {
+addIfNotNull(results, runSafely("ArrayList", new ArrayList<SemesterModel>(), size));
+}
+for (int size : SIZES) {
+addIfNotNull(results, runSafely("LinkedList", new LinkedList<SemesterModel>(), size));
+}
+return results;
+}
+
+private static void addIfNotNull(List<ExperimentResult> results, ExperimentResult result) {
+if (result != null) {
+results.add(result);
+}
+}
+
+private ExperimentResult runSafely(String name, List<SemesterModel> list, int size) {
+try {
+System.gc(); // reduces the influence of the garbage collector of the previous run
+view.showMessage("Running " + name + " with " + size + " elements...");
+return run(name, list, size);
+} catch (ExperimentException e) {
+errLog.addErrWithLog(e);
+errLog.showErrText(e);
+} catch (IOException e) {
+errLog.addErrWithLog(e);
+errLog.showErrText(e);
+} catch (OutOfMemoryError e) {
+// not an Exception, but a real danger for 100000 objects: report it and go on
+list.clear();
+ExperimentException wrapped = new ExperimentException(
+"Not enough memory for " + name + " with " + size + " elements; "
++ "start the program with a larger heap, e.g. -Xmx1g");
+errLog.addErrWithLog(wrapped);
+errLog.showErrText(wrapped);
+}
+return null;
+}
+
+/** Short unlogged run so that the JIT compiler is warmed up before the measured runs. */
+private void warmUp() {
+List<SemesterModel> warm = new ArrayList<SemesterModel>();
+for (int i = 0; i < 2000; i++) {
+warm.add(generator.generateLightModel());
+}
+for (int i = 0; i < 200; i++) {
+warm.remove(random.nextInt(warm.size()));
+}
+List<SemesterModel> warmLinked = new LinkedList<SemesterModel>(warm);
+for (int i = 0; i < 200; i++) {
+warmLinked.remove(random.nextInt(warmLinked.size()));
+}
+}
+
+/**
+* One experiment.
+*
+* @param name name of the collection, written to the log and used in the log file name
+* @param list an empty collection
+* @param size number of elements to add
+* @throws ExperimentException if the parameters are wrong
+* @throws IOException if the log cannot be written
+*/
+public ExperimentResult run(String name, List<SemesterModel> list, int size)
+throws ExperimentException, IOException {
+if (size <= 0) {
+throw new ExperimentException("The size of the collection must be positive: " + size);
+}
+if (list == null || !list.isEmpty()) {
+throw new ExperimentException("An empty collection is required for the experiment");
+}
+OperationStats addStats = new OperationStats("add");
+OperationStats removeStats = new OperationStats("remove");
+
+errLog.startOperationLog(name + "_" + size + ".txt");
+try {
+errLog.writeOperationLine("Start program: " + LocalDateTime.now().format(STAMP));
+errLog.writeOperationLine(name);
+
+// filling: the model is generated before the measurement, only add() is timed
+for (int id = 1; id <= size; id++) {
+SemesterModel model = generator.generateLightModel();
+long start = System.nanoTime();
+list.add(model);
+long elapsed = System.nanoTime() - start;
+addStats.record(elapsed);
+errLog.writeOperationLine("add, ID = " + id + ", " + elapsed);
+}
+writeStats(addStats);
+
+// removal of 10% of the elements (at least one) by random indices
+int removeCount = Math.max(1, (int) Math.round(size * REMOVE_SHARE));
+for (int i = 0; i < removeCount; i++) {
+int index = random.nextInt(list.size());
+long start = System.nanoTime();
+list.remove(index);
+long elapsed = System.nanoTime() - start;
+removeStats.record(elapsed);
+errLog.writeOperationLine("remove, ID = " + (index + 1) + ", " + elapsed);
+}
+writeStats(removeStats);
+
+errLog.writeOperationLine("allOperationsTotalTime = "
++ (addStats.getTotal() + removeStats.getTotal()));
+errLog.writeOperationLine("Finish program: " + LocalDateTime.now().format(STAMP));
+} finally {
+errLog.finishOperationLog();
+}
+return new ExperimentResult(name, size, addStats, removeStats);
+}
+
+private void writeStats(OperationStats stats) throws IOException {
+String op = stats.getOperation();
+errLog.writeOperationLine(op + "TotalCount = " + stats.getCount());
+errLog.writeOperationLine(op + "TotalTime = " + stats.getTotal());
+errLog.writeOperationLine(op + "AverageTime = " + stats.getAverage());
+errLog.writeOperationLine(op + "MedianTime = " + stats.getMedian());
+}
+}
