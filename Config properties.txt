@@ -1,0 +1,7 @@
+username=student
+password=student123
+group=root
+debug=true
+autotests=true
+dataFile=data/students-db.txt
+logFile=logs/application.log
