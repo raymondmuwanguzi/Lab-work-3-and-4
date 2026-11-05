@@ -1,0 +1,9 @@
+server {
+listen 127.0.0.1;
+location /first/ {
+proxy_pass http://127.0.0.1:8000/;
+}
+location /second/ {
+proxy_pass http://127.0.0.1:8001/;
+}
+}
